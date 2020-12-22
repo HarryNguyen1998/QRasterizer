@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.7)
+
+set(LocalHeaderMath
+    ${CMAKE_CURRENT_LIST_DIR}/Utility/Vector.h
+    ${CMAKE_CURRENT_LIST_DIR}/Utility/Matrix.h)
+set(HeaderMath ${LocalHeaderMath} PARENT_SCOPE)
