@@ -3,3 +3,6 @@ Game
 .vs
 
 Testing
+
+# Configuration file for Visual Studio
+CMakeSettings.json

@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.7)
+
+set(LocalImplementationMath
+    ${CMAKE_CURRENT_LIST_DIR}/Vector.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Matrix.cpp)
+set(ImplementationMath ${LocalImplementationMath} PARENT_SCOPE)
