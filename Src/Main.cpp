@@ -3,160 +3,216 @@
 
 #include <iostream>
 #include <fstream>
+#include <cmath>
 
-const Vec3f verts[146] = {
-    {        0.0f,    39.034f,         0}, {  0.76212f,    36.843f,         0},
-    {        3,    36.604f,         0}, {        1,    35.604f,         0},
-    {   2.0162f,    33.382f,         0}, {        0.0f,    34.541f,         0},
-    {  -2.0162f,    33.382f,         0}, {       -1,    35.604f,         0},
-    {       -3,    36.604f,         0}, { -0.76212f,    36.843f,         0},
-    {-0.040181f,     34.31f,         0}, {   3.2778f,    30.464f,         0},
-    {-0.040181f,    30.464f,         0}, {-0.028749f,    30.464f,         0},
-    {   3.2778f,    30.464f,         0}, {   1.2722f,    29.197f,         0},
-    {   1.2722f,    29.197f,         0}, {-0.028703f,    29.197f,         0},
-    {   1.2722f,    29.197f,         0}, {   5.2778f,    25.398f,         0},
-    { -0.02865f,    25.398f,         0}, {   1.2722f,    29.197f,         0},
-    {   5.2778f,    25.398f,         0}, {   3.3322f,    24.099f,         0},
-    {-0.028683f,    24.099f,         0}, {   7.1957f,    20.299f,         0},
-    { -0.02861f,    20.299f,         0}, {   5.2778f,    19.065f,         0},
-    {-0.028663f,    18.984f,         0}, {   9.2778f,    15.265f,         0},
-    {-0.028571f,    15.185f,         0}, {   9.2778f,    15.265f,         0},
-    {   7.3772f,    13.999f,         0}, {-0.028625f,    13.901f,         0},
-    {   9.2778f,    15.265f,         0}, {   12.278f,    8.9323f,         0},
-    {-0.028771f,    8.9742f,         0}, {   12.278f,    8.9323f,         0},
-    {   10.278f,    7.6657f,         0}, {-0.028592f,    7.6552f,         0},
-    {   15.278f,    2.5994f,         0}, {-0.028775f,    2.6077f,         0},
-    {   15.278f,    2.5994f,         0}, {   13.278f,    1.3329f,         0},
-    {-0.028727f,    1.2617f,         0}, {   18.278f,   -3.7334f,         0},
-    {   18.278f,   -3.7334f,         0}, {   2.2722f,   -1.2003f,         0},
-    {-0.028727f,   -1.3098f,         0}, {   4.2722f,        -5,         0},
-    {   4.2722f,        -5,         0}, {-0.028727f,        -5,         0},
-    {  -3.3582f,    30.464f,         0}, {  -3.3582f,    30.464f,         0},
-    {  -1.3526f,    29.197f,         0}, {  -1.3526f,    29.197f,         0},
-    {  -1.3526f,    29.197f,         0}, {  -5.3582f,    25.398f,         0},
-    {  -1.3526f,    29.197f,         0}, {  -5.3582f,    25.398f,         0},
-    {  -3.4126f,    24.099f,         0}, {   -7.276f,    20.299f,         0},
-    {  -5.3582f,    19.065f,         0}, {  -9.3582f,    15.265f,         0},
-    {  -9.3582f,    15.265f,         0}, {  -7.4575f,    13.999f,         0},
-    {  -9.3582f,    15.265f,         0}, {  -12.358f,    8.9323f,         0},
-    {  -12.358f,    8.9323f,         0}, {  -10.358f,    7.6657f,         0},
-    {  -15.358f,    2.5994f,         0}, {  -15.358f,    2.5994f,         0},
-    {  -13.358f,    1.3329f,         0}, {  -18.358f,   -3.7334f,         0},
-    {  -18.358f,   -3.7334f,         0}, {  -2.3526f,   -1.2003f,         0},
-    {  -4.3526f,        -5,         0}, {  -4.3526f,        -5,         0},
-    {        0.0f,     34.31f,  0.040181f}, {        0.0f,    30.464f,   -3.2778f},
-    {        0.0f,    30.464f,  0.040181f}, {        0.0f,    30.464f,  0.028749f},
-    {        0.0f,    30.464f,   -3.2778f}, {        0.0f,    29.197f,   -1.2722f},
-    {        0.0f,    29.197f,   -1.2722f}, {        0.0f,    29.197f,  0.028703f},
-    {        0.0f,    29.197f,   -1.2722f}, {        0.0f,    25.398f,   -5.2778f},
-    {        0.0f,    25.398f,   0.02865f}, {        0.0f,    29.197f,   -1.2722f},
-    {        0.0f,    25.398f,   -5.2778f}, {        0.0f,    24.099f,   -3.3322f},
-    {        0.0f,    24.099f,  0.028683f}, {        0.0f,    20.299f,   -7.1957f},
-    {        0.0f,    20.299f,   0.02861f}, {        0.0f,    19.065f,   -5.2778f},
-    {        0.0f,    18.984f,  0.028663f}, {        0.0f,    15.265f,   -9.2778f},
-    {        0.0f,    15.185f,  0.028571f}, {        0.0f,    15.265f,   -9.2778f},
-    {        0.0f,    13.999f,   -7.3772f}, {        0.0f,    13.901f,  0.028625f},
-    {        0.0f,    15.265f,   -9.2778f}, {        0.0f,    8.9323f,   -12.278f},
-    {        0.0f,    8.9742f,  0.028771f}, {        0.0f,    8.9323f,   -12.278f},
-    {        0.0f,    7.6657f,   -10.278f}, {        0.0f,    7.6552f,  0.028592f},
-    {        0.0f,    2.5994f,   -15.278f}, {        0.0f,    2.6077f,  0.028775f},
-    {        0.0f,    2.5994f,   -15.278f}, {        0.0f,    1.3329f,   -13.278f},
-    {        0.0f,    1.2617f,  0.028727f}, {        0.0f,   -3.7334f,   -18.278f},
-    {        0.0f,   -3.7334f,   -18.278f}, {        0.0f,   -1.2003f,   -2.2722f},
-    {        0.0f,   -1.3098f,  0.028727f}, {        0.0f,        -5,   -4.2722f},
-    {        0.0f,        -5,   -4.2722f}, {        0.0f,        -5,  0.028727f},
-    {        0.0f,    30.464f,    3.3582f}, {        0.0f,    30.464f,    3.3582f},
-    {        0.0f,    29.197f,    1.3526f}, {        0.0f,    29.197f,    1.3526f},
-    {        0.0f,    29.197f,    1.3526f}, {        0.0f,    25.398f,    5.3582f},
-    {        0.0f,    29.197f,    1.3526f}, {        0.0f,    25.398f,    5.3582f},
-    {        0.0f,    24.099f,    3.4126f}, {        0.0f,    20.299f,     7.276f},
-    {        0.0f,    19.065f,    5.3582f}, {        0.0f,    15.265f,    9.3582f},
-    {        0.0f,    15.265f,    9.3582f}, {        0.0f,    13.999f,    7.4575f},
-    {        0.0f,    15.265f,    9.3582f}, {        0.0f,    8.9323f,    12.358f},
-    {        0.0f,    8.9323f,    12.358f}, {        0.0f,    7.6657f,    10.358f},
-    {        0.0f,    2.5994f,    15.358f}, {        0.0f,    2.5994f,    15.358f},
-    {        0.0f,    1.3329f,    13.358f}, {        0.0f,   -3.7334f,    18.358f},
-    {        0.0f,   -3.7334f,    18.358f}, {        0.0f,   -1.2003f,    2.3526f},
-    {        0.0f,        -5,    4.3526f}, {        0.0f,        -5,    4.3526f}
-};
+// We have 146 vertices, each vertex coord in (x, y, z)
+const Vec3f g_verts[146] = { 
+    Vec3f{  -2.5703f,   0.78053f,  -2.4e-5f}, Vec3f{ -0.89264f,  0.022582f,  0.018577f}, 
+    Vec3f{   1.6878f, -0.017131f,  0.022032f}, Vec3f{   3.4659f,  0.025667f,  0.018577f}, 
+    Vec3f{  -2.5703f,   0.78969f, -0.001202f}, Vec3f{ -0.89264f,   0.25121f,   0.93573f}, 
+    Vec3f{   1.6878f,   0.25121f,    1.1097f}, Vec3f{   3.5031f,   0.25293f,   0.93573f}, 
+    Vec3f{  -2.5703f,    1.0558f, -0.001347f}, Vec3f{ -0.89264f,    1.0558f,    1.0487f}, 
+    Vec3f{   1.6878f,    1.0558f,    1.2437f}, Vec3f{   3.6342f,    1.0527f,    1.0487f}, 
+    Vec3f{  -2.5703f,    1.0558f,       0.0f}, Vec3f{ -0.89264f,    1.0558f,       0.0f}, 
+    Vec3f{   1.6878f,    1.0558f,       0.0f}, Vec3f{   3.6342f,    1.0527f,       0.0f}, 
+    Vec3f{  -2.5703f,    1.0558f,  0.001347f}, Vec3f{ -0.89264f,    1.0558f,   -1.0487f}, 
+    Vec3f{   1.6878f,    1.0558f,   -1.2437f}, Vec3f{   3.6342f,    1.0527f,   -1.0487f}, 
+    Vec3f{  -2.5703f,   0.78969f,  0.001202f}, Vec3f{ -0.89264f,   0.25121f,  -0.93573f}, 
+    Vec3f{   1.6878f,   0.25121f,   -1.1097f}, Vec3f{   3.5031f,   0.25293f,  -0.93573f}, 
+    Vec3f{   3.5031f,   0.25293f,       0.0f}, Vec3f{  -2.5703f,   0.78969f,       0.0f}, 
+    Vec3f{   1.1091f,    1.2179f,       0.0f}, Vec3f{    1.145f,     6.617f,       0.0f}, 
+    Vec3f{   4.0878f,    1.2383f,       0.0f}, Vec3f{  -2.5693f,    1.1771f, -0.081683f}, 
+    Vec3f{  0.98353f,    6.4948f, -0.081683f}, Vec3f{ -0.72112f,    1.1364f, -0.081683f}, 
+    Vec3f{   0.9297f,     6.454f,       0.0f}, Vec3f{  -0.7929f,     1.279f,       0.0f}, 
+    Vec3f{  0.91176f,    1.2994f,       0.0f} };
 
-const unsigned int numTris = 128;
-const unsigned int tris[numTris * 3] = {
-      8,   7,   9,   6,   5,   7,   4,   3,   5,   2,   1,   3,   0,   9,   1,
-      5,   3,   7,   7,   3,   9,   9,   3,   1,  10,  12,  11,  13,  15,  14,
-     15,  13,  16,  13,  17,  16,  18,  20,  19,  17,  20,  21,  20,  23,  22,
-     20,  24,  23,  23,  26,  25,  24,  26,  23,  26,  27,  25,  26,  28,  27,
-     27,  30,  29,  28,  30,  27,  30,  32,  31,  30,  33,  32,  27,  30,  34,
-     32,  36,  35,  33,  36,  32,  36,  38,  37,  36,  39,  38,  38,  41,  40,
-     39,  41,  38,  41,  43,  42,  41,  44,  43,  44,  45,  43,  44,  47,  46,
-     44,  48,  47,  48,  49,  47,  48,  51,  50,  10,  52,  12,  13,  53,  54,
-     55,  17,  54,  13,  54,  17,  56,  57,  20,  17,  58,  20,  20,  59,  60,
-     20,  60,  24,  60,  61,  26,  24,  60,  26,  26,  61,  62,  26,  62,  28,
-     62,  63,  30,  28,  62,  30,  30,  64,  65,  30,  65,  33,  62,  66,  30,
-     65,  67,  36,  33,  65,  36,  36,  68,  69,  36,  69,  39,  69,  70,  41,
-     39,  69,  41,  41,  71,  72,  41,  72,  44,  44,  72,  73,  44,  74,  75,
-     44,  75,  48,  48,  75,  76,  48,  77,  51,  78,  80,  79,  81,  83,  82,
-     83,  81,  84,  81,  85,  84,  86,  88,  87,  85,  88,  89,  88,  91,  90,
-     88,  92,  91,  91,  94,  93,  92,  94,  91,  94,  95,  93,  94,  96,  95,
-     95,  98,  97,  96,  98,  95,  98, 100,  99,  98, 101, 100,  95,  98, 102,
-    100, 104, 103, 101, 104, 100, 104, 106, 105, 104, 107, 106, 106, 109, 108,
-    107, 109, 106, 109, 111, 110, 109, 112, 111, 112, 113, 111, 112, 115, 114,
-    112, 116, 115, 116, 117, 115, 116, 119, 118,  78, 120,  80,  81, 121, 122,
-    123,  85, 122,  81, 122,  85, 124, 125,  88,  85, 126,  88,  88, 127, 128,
-     88, 128,  92, 128, 129,  94,  92, 128,  94,  94, 129, 130,  94, 130,  96,
-    130, 131,  98,  96, 130,  98,  98, 132, 133,  98, 133, 101, 130, 134,  98,
-    133, 135, 104, 101, 133, 104, 104, 136, 137, 104, 137, 107, 137, 138, 109,
-    107, 137, 109, 109, 139, 140, 109, 140, 112, 112, 140, 141, 112, 142, 143,
-    112, 143, 116, 116, 143, 144, 116, 145, 119
-};
+// Triangle index array. Each successive group of 3 ints are the pos of each vertex in the vertex
+// array that form a triangle. Ex: g_trisIndices[0], g_trisIndices[1] and g_trisIndices[2] are 3
+// vertices in g_verts that form a triangle, then 3, 4, 5, and so on. So, only these vertex
+// combinations should make up triangles.
+const unsigned g_numTris = 51;
+const unsigned g_trisIndices[g_numTris * 3] = {
+	4,   0,   5,   0,   1,   5,   1,   2,   5,   5,   2,   6,   3,   7,   2,
+	2,   7,   6,   5,   9,   4,   4,   9,   8,   5,   6,   9,   9,   6,  10,
+	7,  11,   6,   6,  11,  10,   9,  13,   8,   8,  13,  12,  10,  14,   9,
+	9,  14,  13,  10,  11,  14,  14,  11,  15,  17,  16,  13,  12,  13,  16,
+	13,  14,  17,  17,  14,  18,  15,  19,  14,  14,  19,  18,  16,  17,  20,
+	20,  17,  21,  18,  22,  17,  17,  22,  21,  18,  19,  22,  22,  19,  23,
+	20,  21,   0,  21,   1,   0,  22,   2,  21,  21,   2,   1,  22,  23,   2,
+	2,  23,   3,   3,  23,  24,   3,  24,   7,  24,  23,  15,  15,  23,  19,
+	24,  15,   7,   7,  15,  11,   0,  25,  20,   0,   4,  25,  20,  25,  16,
+	16,  25,  12,  25,   4,  12,  12,   4,   8,  26,  27,  28,  29,  30,  31,
+	32,  34,  33 };
 
-void ComputePixelCoordinates(const Vec3f pWorld, Vec2i &pRaster, const Mat44f &worldToCamera,
-	float canvasWidth, float canvasHeight,
-	unsigned int imageWidth, unsigned int imageHeight)
+// Physical camera model
+float g_focalLength = 35.0f;	// mm
+// inch
+float g_filmApertureWidth = 0.885f;
+float g_filmApertureHeight = 0.885f;
+static const float inchTomm = 25.4f;
+float g_zNear = 0.01f;
+float g_zFar = 1000.0f;
+// Img resolution in pixels
+int g_imgWidth = 512;
+int g_imgHeight = 512;
+
+// The mode doesn't change anything if device gate and film gate resolution are the same
+enum class ResolutionGateMode
 {
+	kFill,		// Fit resolution gate into film gate (scale down)
+	kOverscan,	// Fit film gate into resolution gate (scale up)
+};
+ResolutionGateMode g_resolutionGateMode = ResolutionGateMode::kOverscan;
+
+bool ComputePixelCoordinates(const Vec3f pWorld, Vec2i &pRaster, const Mat44f &worldToCamera,
+	float canvasB, float canvasL, float canvasT, float canvasR,
+	unsigned imageWidth, unsigned imageHeight, float zNear)
+{
+	bool isVisible = true;
+
 	// Convert from world space to cam space
 	Vec3f pCamera;
 	worldToCamera.MultiplyVecMat(pWorld, &pCamera);
 	// Perspective divide
-	Vec2f pScreen{ pCamera.x / -pCamera.z, pCamera.y / -pCamera.z };
+	Vec2f pScreen{ pCamera.x / -pCamera.z * zNear, pCamera.y / -pCamera.z * zNear };
 	// From screen space, convert to NDC space.
 	Vec2f pNDC;
-	pNDC.x = (pScreen.x + canvasWidth / 2) * (1.0f / canvasWidth);
-	pNDC.y = (pScreen.y + canvasHeight / 2) * (1.0f / canvasHeight);
+	pNDC.x = (pScreen.x + canvasR) * (1.0f / (canvasR * 2));
+	pNDC.y = (pScreen.y + canvasT) * (1.0f / (canvasT * 2));
 	// From NDC space to raster space.
 	pRaster.x = (int)(pNDC.x * imageWidth);
 	pRaster.y = (int)((1.0f - pNDC.y) * imageHeight);
+
+	if (pScreen.x < canvasL || pScreen.x > canvasR ||
+		pScreen.y < canvasB || pScreen.y > canvasT)
+	{
+		isVisible = false;
+	}
+
+	return isVisible;
 }
+
+// (c-a) Cross (b-a)
+inline float EdgeFunction(const Vec3f& a, const Vec3f& b, const Vec3f& c)
+{
+    float result = (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+    return result;
+}
+typedef unsigned char RGB[3];
 
 using std::ofstream;
 int main()
 {
+#if 0
+	// Compute canvas coords
+	float filmAspectRatio = g_filmApertureWidth / g_filmApertureHeight;
+	float deviceAspectRatio = (float)g_imgWidth / g_imgHeight;
+	float canvasT = ((g_filmApertureHeight * inchTomm) / (2 * g_focalLength)) * g_zNear;
+	float canvasR = canvasT * filmAspectRatio;
+
+	switch (g_resolutionGateMode)
+	{
+	default:
+	case ResolutionGateMode::kFill:
+	{
+		if (filmAspectRatio > deviceAspectRatio)
+		{
+			canvasR *= deviceAspectRatio / filmAspectRatio;
+		}
+		else
+		{
+			canvasT *= filmAspectRatio / deviceAspectRatio;
+		}
+	}
+	case ResolutionGateMode::kOverscan:
+	{
+		if (filmAspectRatio > deviceAspectRatio)
+		{
+			canvasT *= filmAspectRatio / deviceAspectRatio;
+		}
+		else
+		{
+			canvasR *= deviceAspectRatio / filmAspectRatio;
+		}
+	}
+	}
+
+	float canvasB = -canvasT;
+	float canvasL = -canvasR;
+    float canvasWidth = 2, canvasHeight = 2;
+
+	printf("Screen window coordinates: %f %f %f %f\n", canvasB, canvasL, canvasT, canvasR); 
+    printf("Film Aspect Ratio: %f\nDevice Aspect Ratio: %f\n", filmAspectRatio, deviceAspectRatio); 
+    printf("Angle of view: %f (deg)\n", 2 * atan((g_filmApertureWidth * inchTomm / 2) / g_focalLength) * 180 / 3.14159265359f);
+
 	ofstream ofs{"./proj.svg"};
 	ofs << "<svg version=\"1.1f\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/2000/svg\" height=\"512\" width=\"512\">\n";
 
 	// We exported the cam matrix from Maya. We need to compute its inverse, which is the mat used
 	// in ComputePixelCoord()
-	Mat44f cameraToWorld(0.871214f, 0.0f, -0.490904f, 0.0f, -0.192902f, 0.919559f, -0.342346f, 0.0f, 0.451415f, 0.392953f, 0.801132f, 0.0f, 14.777467f, 29.361945f, 27.993464f, 1);
-	Mat44f worldToCamera = cameraToWorld.Inverse();
+    Mat44f cameraToWorld(-0.95424f, 0.0f, 0.299041f, 0.0f, 0.0861242f, 0.95763f, 0.274823f, 0.0f, -0.28637f, 0.288002f, -0.913809f, 0.0f, -3.734612f, 7.610426f, -14.152769f, 1.0f); 
+    Mat44f worldToCamera = cameraToWorld.Inverse(); 
     std::cerr << worldToCamera << std::endl;
-    float canvasWidth = 2, canvasHeight = 2;
-    unsigned int imageWidth = 512, imageHeight = 512;
 
-	for (uint32_t i = 0; i < numTris; ++i) {
-		const Vec3f &v0World = verts[tris[i * 3]];
-		const Vec3f &v1World = verts[tris[i * 3 + 1]];
-		const Vec3f &v2World = verts[tris[i * 3 + 2]];
+	for (uint32_t i = 0; i < g_numTris; ++i) {
+		const Vec3f &v0World = g_verts[g_trisIndices[i * 3]];
+		const Vec3f &v1World = g_verts[g_trisIndices[i * 3 + 1]];
+		const Vec3f &v2World = g_verts[g_trisIndices[i * 3 + 2]];
 		Vec2i v0Raster, v1Raster, v2Raster;
-		ComputePixelCoordinates(v0World, v0Raster, worldToCamera, canvasWidth, canvasHeight, imageWidth, imageHeight);
-		ComputePixelCoordinates(v1World, v1Raster, worldToCamera, canvasWidth, canvasHeight, imageWidth, imageHeight);
-		ComputePixelCoordinates(v2World, v2Raster, worldToCamera, canvasWidth, canvasHeight, imageWidth, imageHeight);
-		std::cerr << v0Raster.x << " " << v0Raster.y << ", " <<
-			v1Raster.x << " " << v1Raster.y << ", " <<
-			v2Raster.x << " " << v2Raster.y << "\n";
-		ofs << "<line x1=\"" << v0Raster.x << "\" y1=\"" << v0Raster.y << "\" x2=\"" << v1Raster.x << "\" y2=\"" << v1Raster.y << "\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />\n";
-		ofs << "<line x1=\"" << v1Raster.x << "\" y1=\"" << v1Raster.y << "\" x2=\"" << v2Raster.x << "\" y2=\"" << v2Raster.y << "\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />\n";
-		ofs << "<line x1=\"" << v2Raster.x << "\" y1=\"" << v2Raster.y << "\" x2=\"" << v0Raster.x << "\" y2=\"" << v0Raster.y << "\" style=\"stroke:rgb(0,0,0);stroke-width:1\" />\n";
+
+		bool isVisible = true;
+		isVisible &= ComputePixelCoordinates(v0World, v0Raster, worldToCamera, canvasB, canvasL, canvasT, canvasR, g_imgWidth, g_imgHeight, g_zNear);
+		isVisible &= ComputePixelCoordinates(v1World, v1Raster, worldToCamera, canvasB, canvasL, canvasT, canvasR, g_imgWidth, g_imgHeight, g_zNear);
+		isVisible &= ComputePixelCoordinates(v2World, v2Raster, worldToCamera, canvasB, canvasL, canvasT, canvasR, g_imgWidth, g_imgHeight, g_zNear);
+
+		int val = isVisible ? 0 : 255;
+		ofs << "<line x1=\"" << v0Raster.x << "\" y1=\"" << v0Raster.y << "\" x2=\"" << v1Raster.x << "\" y2=\"" << v1Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
+		ofs << "<line x1=\"" << v1Raster.x << "\" y1=\"" << v1Raster.y << "\" x2=\"" << v2Raster.x << "\" y2=\"" << v2Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
+		ofs << "<line x1=\"" << v2Raster.x << "\" y1=\"" << v2Raster.y << "\" x2=\"" << v0Raster.x << "\" y2=\"" << v0Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
 	}
 	ofs << "</svg>\n";
 	ofs.close();
+#endif
+    RGB* frameBuffer = new RGB[g_imgWidth * g_imgHeight];
+    memset(frameBuffer, 0x0, g_imgWidth * g_imgHeight * 3);
+
+    // These are our rasterized coord.
+    Vec3f v0{491.407f, 411.407f, 0.0f}; 
+    Vec3f v1{148.593f, 68.5928f, 0.0f}; 
+    Vec3f v2{148.593f, 411.407f, 0.0f}; 
+    Vec3f c0{1.0f, 0.0f, 0.0f}; 
+    Vec3f c1{0.0f, 1.0f, 0.0f}; 
+    Vec3f c2{0.0f, 0.0f, 1.0f}; 
+
+    float wTriangle = EdgeFunction(v0, v1, v2);
+    for (int j = 0; j < g_imgHeight; ++j)
+    {
+        for (int i = 0; i < g_imgWidth; ++i)
+        {
+            Vec3f p{i + 0.5f, j + 0.5f, 0.0f};
+            float w0 = EdgeFunction(v1, v2, p) / wTriangle;
+            float w1 = EdgeFunction(v2, v0, p) / wTriangle;
+            float w2 = EdgeFunction(v0, v1, p) / wTriangle;
+
+            // Check if inside triangle
+            if (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f)
+            {
+                float r = w0 * c0[0] + w1 * c1[0] + w2 * c2[0];
+                float g = w0 * c0[1] + w1 * c1[1] + w2 * c2[1];
+                float b = w0 * c0[2] + w1 * c1[2] + w2 * c2[2];
+                frameBuffer[g_imgWidth * j + i][0] = (unsigned char)(r * 255.0f);
+                frameBuffer[g_imgWidth * j + i][1] = (unsigned char)(g * 255.0f);
+                frameBuffer[g_imgWidth * j + i][2] = (unsigned char)(b * 255.0f);
+
+            }
+        }
+    }
+
+
+    ofstream ofs{"./tri.ppm", ofstream::out | ofstream::binary};
+    ofs << "P6\n" << g_imgWidth << " " << g_imgHeight << "\n255\n";
+    ofs.write((char*)frameBuffer, g_imgWidth * g_imgHeight * 3);
+    ofs.close();
+
+    delete[] frameBuffer;
 }
