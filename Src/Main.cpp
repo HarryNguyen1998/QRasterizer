@@ -53,8 +53,8 @@ static const float inchTomm = 25.4f;
 float g_zNear = 0.01f;
 float g_zFar = 1000.0f;
 // Img resolution in pixels
-int g_imgWidth = 512;
-int g_imgHeight = 512;
+const int g_imgWidth = 1024;
+const int g_imgHeight = 1024;
 
 // The mode doesn't change anything if device gate and film gate resolution are the same
 enum class ResolutionGateMode
@@ -99,6 +99,15 @@ inline float EdgeFunction(const Vec3f& a, const Vec3f& b, const Vec3f& c)
     return result;
 }
 typedef unsigned char RGB[3];
+
+// Pls remember not to pass a vector with z-value of 0.
+inline float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2)
+{
+    float depthInverse = (w0 / v0.z) + (w1 / v1.z) + (w2 / v2.z);
+    float depth = (1 / depthInverse);
+    return depth;
+}
+
 
 using std::ofstream;
 int main()
@@ -176,38 +185,75 @@ int main()
     RGB* frameBuffer = new RGB[g_imgWidth * g_imgHeight];
     memset(frameBuffer, 0x0, g_imgWidth * g_imgHeight * 3);
 
-    // These are our rasterized coord.
-    Vec3f v0{491.407f, 411.407f, 0.0f}; 
-    Vec3f v1{148.593f, 68.5928f, 0.0f}; 
-    Vec3f v2{148.593f, 411.407f, 0.0f}; 
+    float* depthBuffer{new float[g_imgWidth * g_imgHeight]};
+    std::fill(depthBuffer, depthBuffer + g_imgWidth * g_imgHeight, FLT_MAX);
+
+    // These are our rasterized coord, in CCW winding order.
+    Vec3f v0{491.407f, 411.407f, 20.0f}; 
+    Vec3f v1{148.593f, 68.5928f, 20.0f}; 
+    Vec3f v2{148.593f, 411.407f, 20.0f}; 
     Vec3f c0{1.0f, 0.0f, 0.0f}; 
     Vec3f c1{0.0f, 1.0f, 0.0f}; 
     Vec3f c2{0.0f, 0.0f, 1.0f}; 
 
+    // Our white tri, which should overlap the colored tri.
+    Vec3f v3{400.0f, 600.0f, 1.0f};
+    Vec3f v4{269.0f, 350.0f, 1.0f};
+    Vec3f v5{269.0f, 600.0f, 1.0f};
+
     float wTriangle = EdgeFunction(v0, v1, v2);
+    float wTriangle2 = EdgeFunction(v3, v4, v5);
     for (int j = 0; j < g_imgHeight; ++j)
     {
         for (int i = 0; i < g_imgWidth; ++i)
         {
-            Vec3f p{i + 0.5f, j + 0.5f, 0.0f};
+            Vec3f p{ i + 0.5f, j + 0.5f, 0.0f };
             float w0 = EdgeFunction(v1, v2, p) / wTriangle;
             float w1 = EdgeFunction(v2, v0, p) / wTriangle;
             float w2 = EdgeFunction(v0, v1, p) / wTriangle;
 
-            // Check if inside triangle
-            if (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f)
-            {
-                float r = w0 * c0[0] + w1 * c1[0] + w2 * c2[0];
-                float g = w0 * c0[1] + w1 * c1[1] + w2 * c2[1];
-                float b = w0 * c0[2] + w1 * c1[2] + w2 * c2[2];
-                frameBuffer[g_imgWidth * j + i][0] = (unsigned char)(r * 255.0f);
-                frameBuffer[g_imgWidth * j + i][1] = (unsigned char)(g * 255.0f);
-                frameBuffer[g_imgWidth * j + i][2] = (unsigned char)(b * 255.0f);
+            float w3 = EdgeFunction(v4, v5, p) / wTriangle2;
+            float w4 = EdgeFunction(v5, v3, p) / wTriangle2;
+            float w5 = EdgeFunction(v3, v4, p) / wTriangle2;
 
+            // Check if pixel overlaps the tri. If we use barycentric coords directly, we don't care
+            // about winding order.
+            bool doesOverlap = false;
+            float r, g, b;
+            if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+            {
+                doesOverlap = true;
+                float depthVal = ComputeDepth(v0, v1, v2, w0, w1, w2);
+                if (depthVal < depthBuffer[j * g_imgWidth + i])
+                {
+                    r = c0[0] * w0 + c1[0] * w1 + c2[0] * w2;
+                    g = c0[1] * w0 + c1[1] * w1 + c2[1] * w2;
+                    b = c0[2] * w0 + c1[2] * w1 + c2[2] * w2;
+                    depthBuffer[j * g_imgWidth + i] = depthVal;
+                }
+            }
+
+            if (w3 >= 0 && w4 >= 0 && w5 >= 0)
+            {
+                doesOverlap = true;
+                float depthVal = ComputeDepth(v3, v4, v5, w3, w4, w5);
+                if (depthVal < depthBuffer[j * g_imgWidth + i])
+                {
+                    r = 1.0f;
+                    g = 1.0f;
+                    b = 1.0f;
+                    depthBuffer[j * g_imgWidth + i] = depthVal;
+                }
+            }
+
+            if (doesOverlap)
+            {
+                frameBuffer[j * g_imgWidth + i][0] = (unsigned char)(r * 255.0f);
+                frameBuffer[j * g_imgWidth + i][1] = (unsigned char)(g * 255.0f);
+                frameBuffer[j * g_imgWidth + i][2] = (unsigned char)(b * 255.0f);
             }
         }
     }
-
 
     ofstream ofs{"./tri.ppm", ofstream::out | ofstream::binary};
     ofs << "P6\n" << g_imgWidth << " " << g_imgHeight << "\n255\n";
@@ -215,4 +261,5 @@ int main()
     ofs.close();
 
     delete[] frameBuffer;
+    delete[] depthBuffer;
 }
