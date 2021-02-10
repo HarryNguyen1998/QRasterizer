@@ -53,8 +53,8 @@ static const float inchTomm = 25.4f;
 float g_zNear = 0.01f;
 float g_zFar = 1000.0f;
 // Img resolution in pixels
-const int g_imgWidth = 1024;
-const int g_imgHeight = 1024;
+const int g_imgWidth = 512;
+const int g_imgHeight = 512;
 
 // The mode doesn't change anything if device gate and film gate resolution are the same
 enum class ResolutionGateMode
@@ -107,7 +107,6 @@ inline float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, flo
     float depth = (1 / depthInverse);
     return depth;
 }
-
 
 using std::ofstream;
 int main()
@@ -182,39 +181,101 @@ int main()
 	ofs << "</svg>\n";
 	ofs.close();
 #endif
+
     RGB* frameBuffer = new RGB[g_imgWidth * g_imgHeight];
-    memset(frameBuffer, 0x0, g_imgWidth * g_imgHeight * 3);
+    memset(frameBuffer, 0x191819, g_imgWidth * g_imgHeight * 3);
 
     float* depthBuffer{new float[g_imgWidth * g_imgHeight]};
     std::fill(depthBuffer, depthBuffer + g_imgWidth * g_imgHeight, FLT_MAX);
 
-    // These are our rasterized coord, in CCW winding order.
-    Vec3f v0{491.407f, 411.407f, 20.0f}; 
-    Vec3f v1{148.593f, 68.5928f, 20.0f}; 
-    Vec3f v2{148.593f, 411.407f, 20.0f}; 
-    Vec3f c0{1.0f, 0.0f, 0.0f}; 
-    Vec3f c1{0.0f, 1.0f, 0.0f}; 
-    Vec3f c2{0.0f, 0.0f, 1.0f}; 
+    // Coords in cam space, in CW winding order. v0 is further (green), then v1 (red)
+    Vec3f v0{ 13.0f,  34.0f, 114.0f}; 
+    Vec3f v1{ 29.0f, -15.0f,  44.0f}; 
+    Vec3f v2{-48.0f, -10.0f,  82.0f}; 
+    // Perspective projection
+    v0.x /= v0.z; v0.y /= v0.z;
+    v1.x /= v1.z; v1.y /= v1.z;
+    v2.x /= v2.z; v2.y /= v2.z;
+    // Convert to NDC space, then to raster space (assuming screen width and height = 2)
+    v0.x = (1 + v0.x) * 0.5f * g_imgWidth; v0.y = (1 + v0.y) * 0.5f * g_imgHeight;
+    v1.x = (1 + v1.x) * 0.5f * g_imgWidth; v1.y = (1 + v1.y) * 0.5f * g_imgHeight;
+    v2.x = (1 + v2.x) * 0.5f * g_imgWidth; v2.y = (1 + v2.y) * 0.5f * g_imgHeight;
 
-    // Our white tri, which should overlap the colored tri.
-    Vec3f v3{400.0f, 600.0f, 1.0f};
-    Vec3f v4{269.0f, 350.0f, 1.0f};
-    Vec3f v5{269.0f, 600.0f, 1.0f};
+#ifdef TEXTURE_COORD
+    // Texture coords
+    Vec2f st0{0.0f, 0.0f};
+    Vec2f st1{1.0f, 0.0f};
+    Vec2f st2{0.0f, 1.0f};
+
+#ifdef PERSP_CORRECT
+    st0.x /= v0.z; st0.y /= v0.z;
+    st1.x /= v1.z; st1.y /= v1.z;
+    st2.x /= v2.z; st2.y /= v2.z;
+#endif
+#endif
 
     float wTriangle = EdgeFunction(v0, v1, v2);
+
+    Vec3f c0{0.0f, 0.0f, 1.0f}; 
+    Vec3f c1{0.0f, 1.0f, 0.0f}; 
+    Vec3f c2{1.0f, 0.0f, 0.0f}; 
+#ifdef PERSP_CORRECT
+    c0.x /= v0.z; c0.y /= v0.z; c0.z /= v0.z;
+    c1.x /= v1.z; c1.y /= v1.z; c1.z /= v1.z;
+    c2.x /= v2.z; c2.y /= v2.z; c2.z /= v2.z;
+#endif
+
+#ifdef TEST_VISIBILITY
+    // Our white tri, which should overlap the colored tri.
+    Vec3f v3{-17.0f,  10.0f, 50.0f};
+    Vec3f v4{ 17.0f, -20.0f, 50.0f};
+    Vec3f v5{-17.0f, -20.0f, 50.0f};
+    // Perspective projection
+    v3.x /= v3.z; v3.y /= v3.z;
+    v4.x /= v4.z; v4.y /= v4.z;
+    v5.x /= v5.z; v5.y /= v5.z;
+    // Convert to NDC space, then to raster space (assuming screen width and height = 2)
+    v3.x = (1 + v3.x) * 0.5f * g_imgWidth; v3.y = (1 + v3.y) * 0.5f * g_imgHeight;
+    v4.x = (1 + v4.x) * 0.5f * g_imgWidth; v4.y = (1 + v4.y) * 0.5f * g_imgHeight;
+    v5.x = (1 + v5.x) * 0.5f * g_imgWidth; v5.y = (1 + v5.y) * 0.5f * g_imgHeight;
+
     float wTriangle2 = EdgeFunction(v3, v4, v5);
+#endif
+
     for (int j = 0; j < g_imgHeight; ++j)
     {
         for (int i = 0; i < g_imgWidth; ++i)
         {
-            Vec3f p{ i + 0.5f, j + 0.5f, 0.0f };
+            Vec3f p{ i + 0.5f, g_imgHeight - j + 0.5f, 0.0f };
             float w0 = EdgeFunction(v1, v2, p) / wTriangle;
             float w1 = EdgeFunction(v2, v0, p) / wTriangle;
             float w2 = EdgeFunction(v0, v1, p) / wTriangle;
 
+#ifdef TEXTURE_COORD
+            if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+            {
+                float s = st0.x * w0 + st1.x * w1 + st2.x * w2;
+                float t = st0.y * w0 + st1.y * w1 + st2.y * w2;
+
+#ifdef PERSP_CORRECT
+                float depthVal = ComputeDepth(v0, v1, v2, w0, w1, w2);
+                s *= depthVal;
+                t *= depthVal;
+#endif
+
+                const int m = 10;
+                // Checkerboard pattern
+                float p = (fmod(s * m, 1.0f) > 0.5f) ^ (fmod(t * m, 1.0f) < 0.5f);
+                frameBuffer[j * g_imgWidth + i][0] = (unsigned char)(p * 255.0f);
+                frameBuffer[j * g_imgWidth + i][1] = (unsigned char)(p * 255.0f);
+                frameBuffer[j * g_imgWidth + i][2] = (unsigned char)(p * 255.0f);
+            }
+#else
+#ifdef TEST_VISIBILITY
             float w3 = EdgeFunction(v4, v5, p) / wTriangle2;
             float w4 = EdgeFunction(v5, v3, p) / wTriangle2;
             float w5 = EdgeFunction(v3, v4, p) / wTriangle2;
+#endif
 
             // Check if pixel overlaps the tri. If we use barycentric coords directly, we don't care
             // about winding order.
@@ -229,10 +290,19 @@ int main()
                     r = c0[0] * w0 + c1[0] * w1 + c2[0] * w2;
                     g = c0[1] * w0 + c1[1] * w1 + c2[1] * w2;
                     b = c0[2] * w0 + c1[2] * w1 + c2[2] * w2;
+
+
                     depthBuffer[j * g_imgWidth + i] = depthVal;
+#ifdef PERSP_CORRECT
+                    r *= depthVal;
+                    g *= depthVal;
+                    b *= depthVal;
+
+#endif
                 }
             }
 
+#ifdef TEST_VISIBILITY
             if (w3 >= 0 && w4 >= 0 && w5 >= 0)
             {
                 doesOverlap = true;
@@ -245,13 +315,23 @@ int main()
                     depthBuffer[j * g_imgWidth + i] = depthVal;
                 }
             }
+#endif
 
             if (doesOverlap)
             {
+#ifdef DRAW_DEPTH
+                // This is the greyscale img. Closer means that it appears brighter.
+                frameBuffer[j * g_imgWidth + i][0] = (unsigned char)((1 - depthBuffer[j * g_imgWidth + i] / 115.0f) * 255.0f);
+                frameBuffer[j * g_imgWidth + i][1] = (unsigned char)((1 - depthBuffer[j * g_imgWidth + i] / 115.0f) * 255.0f);
+                frameBuffer[j * g_imgWidth + i][2] = (unsigned char)((1 - depthBuffer[j * g_imgWidth + i] / 115.0f) * 255.0f);
+#else
                 frameBuffer[j * g_imgWidth + i][0] = (unsigned char)(r * 255.0f);
                 frameBuffer[j * g_imgWidth + i][1] = (unsigned char)(g * 255.0f);
                 frameBuffer[j * g_imgWidth + i][2] = (unsigned char)(b * 255.0f);
+#endif
             }
+
+#endif
         }
     }
 
@@ -263,3 +343,4 @@ int main()
     delete[] frameBuffer;
     delete[] depthBuffer;
 }
+

@@ -6,5 +6,30 @@ include_directories(Include)
 add_subdirectory(Helper)
 add_subdirectory(Test)
 
+# set in CMake
+option(PERSP_CORRECT "Perspective correct interpolation" OFF)
+if (PERSP_CORRECT)
+	# Set in program
+	add_definitions(-DPERSP_CORRECT)
+endif()
+
+option(DRAW_DEPTH "Draw the depth buffer" OFF)
+if (DRAW_DEPTH)
+	add_definitions(-DDRAW_DEPTH)
+endif()
+
+option(TEST_VISIBILITY "Check if a triangle closer to the camera will overlap the other" OFF)
+if (TEST_VISIBILITY)
+	# Set in program
+	add_definitions(-DTEST_VISIBILITY)
+endif()
+
+option(TEXTURE_COORD "Draw a textured triangle" OFF)
+if (TEXTURE_COORD)
+	# Set in program
+	add_definitions(-DTEXTURE_COORD)
+endif()
+
+
 add_executable(Rasterizer Main.cpp) 
 target_link_libraries(Rasterizer Helper)
