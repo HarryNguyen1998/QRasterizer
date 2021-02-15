@@ -27,6 +27,8 @@ namespace Math
 		T Dot(const Vec2<T>& v) const;
 		T LengthSqr() const;
 		T Length() const;
+        Vec2 Normal() const;
+        void Normalize();
 
 		// Access operator
 		const T& operator[](unsigned int i) const;
@@ -58,6 +60,8 @@ namespace Math
 		Vec3 Cross(const Vec3<T>& v) const;
 		T LengthSqr() const;
 		T Length() const;
+        Vec3 Normal() const;
+        void Normalize();
 
 		// Access operator
 		const T& operator[](unsigned int i) const;
@@ -131,6 +135,19 @@ namespace Math
 	{
 		return sqrt(LengthSqr());
 	}
+
+    template<typename T>
+    inline Vec2<T> Vec2<T>::Normal() const
+    {
+        Vec2<T> result = *this *= (1 / Length());
+        return result;
+    }
+
+    template<typename T>
+    inline void Vec2<T>::Normalize()
+    {
+        *this *= (1 / Length());
+    }
 
 	template<typename T>
 	inline const T& Vec2<T>::operator[](unsigned int i) const
@@ -217,6 +234,19 @@ namespace Math
 	{
 		return sqrt(LengthSqr());
 	}
+
+    template<typename T>
+    inline Vec3<T> Vec3<T>::Normal() const
+    {
+        Vec3<T> result = *this * (1 / Length());
+        return result;
+    }
+
+    template<typename T>
+    inline void Vec3<T>::Normalize()
+    {
+        *this *= (1 / Length());
+    }
 
 	template<typename T>
 	inline const T& Vec3<T>::operator[](unsigned int i) const

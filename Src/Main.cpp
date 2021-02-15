@@ -1,60 +1,15 @@
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
+#include "Vertices.h"
 
+#include <algorithm>
 #include <iostream>
+#include <string>
 #include <fstream>
 #include <cmath>
 
-// We have 146 vertices, each vertex coord in (x, y, z)
-const Vec3f g_verts[146] = { 
-    Vec3f{  -2.5703f,   0.78053f,  -2.4e-5f}, Vec3f{ -0.89264f,  0.022582f,  0.018577f}, 
-    Vec3f{   1.6878f, -0.017131f,  0.022032f}, Vec3f{   3.4659f,  0.025667f,  0.018577f}, 
-    Vec3f{  -2.5703f,   0.78969f, -0.001202f}, Vec3f{ -0.89264f,   0.25121f,   0.93573f}, 
-    Vec3f{   1.6878f,   0.25121f,    1.1097f}, Vec3f{   3.5031f,   0.25293f,   0.93573f}, 
-    Vec3f{  -2.5703f,    1.0558f, -0.001347f}, Vec3f{ -0.89264f,    1.0558f,    1.0487f}, 
-    Vec3f{   1.6878f,    1.0558f,    1.2437f}, Vec3f{   3.6342f,    1.0527f,    1.0487f}, 
-    Vec3f{  -2.5703f,    1.0558f,       0.0f}, Vec3f{ -0.89264f,    1.0558f,       0.0f}, 
-    Vec3f{   1.6878f,    1.0558f,       0.0f}, Vec3f{   3.6342f,    1.0527f,       0.0f}, 
-    Vec3f{  -2.5703f,    1.0558f,  0.001347f}, Vec3f{ -0.89264f,    1.0558f,   -1.0487f}, 
-    Vec3f{   1.6878f,    1.0558f,   -1.2437f}, Vec3f{   3.6342f,    1.0527f,   -1.0487f}, 
-    Vec3f{  -2.5703f,   0.78969f,  0.001202f}, Vec3f{ -0.89264f,   0.25121f,  -0.93573f}, 
-    Vec3f{   1.6878f,   0.25121f,   -1.1097f}, Vec3f{   3.5031f,   0.25293f,  -0.93573f}, 
-    Vec3f{   3.5031f,   0.25293f,       0.0f}, Vec3f{  -2.5703f,   0.78969f,       0.0f}, 
-    Vec3f{   1.1091f,    1.2179f,       0.0f}, Vec3f{    1.145f,     6.617f,       0.0f}, 
-    Vec3f{   4.0878f,    1.2383f,       0.0f}, Vec3f{  -2.5693f,    1.1771f, -0.081683f}, 
-    Vec3f{  0.98353f,    6.4948f, -0.081683f}, Vec3f{ -0.72112f,    1.1364f, -0.081683f}, 
-    Vec3f{   0.9297f,     6.454f,       0.0f}, Vec3f{  -0.7929f,     1.279f,       0.0f}, 
-    Vec3f{  0.91176f,    1.2994f,       0.0f} };
-
-// Triangle index array. Each successive group of 3 ints are the pos of each vertex in the vertex
-// array that form a triangle. Ex: g_trisIndices[0], g_trisIndices[1] and g_trisIndices[2] are 3
-// vertices in g_verts that form a triangle, then 3, 4, 5, and so on. So, only these vertex
-// combinations should make up triangles.
-const unsigned g_numTris = 51;
-const unsigned g_trisIndices[g_numTris * 3] = {
-	4,   0,   5,   0,   1,   5,   1,   2,   5,   5,   2,   6,   3,   7,   2,
-	2,   7,   6,   5,   9,   4,   4,   9,   8,   5,   6,   9,   9,   6,  10,
-	7,  11,   6,   6,  11,  10,   9,  13,   8,   8,  13,  12,  10,  14,   9,
-	9,  14,  13,  10,  11,  14,  14,  11,  15,  17,  16,  13,  12,  13,  16,
-	13,  14,  17,  17,  14,  18,  15,  19,  14,  14,  19,  18,  16,  17,  20,
-	20,  17,  21,  18,  22,  17,  17,  22,  21,  18,  19,  22,  22,  19,  23,
-	20,  21,   0,  21,   1,   0,  22,   2,  21,  21,   2,   1,  22,  23,   2,
-	2,  23,   3,   3,  23,  24,   3,  24,   7,  24,  23,  15,  15,  23,  19,
-	24,  15,   7,   7,  15,  11,   0,  25,  20,   0,   4,  25,  20,  25,  16,
-	16,  25,  12,  25,   4,  12,  12,   4,   8,  26,  27,  28,  29,  30,  31,
-	32,  34,  33 };
-
-// Physical camera model
-float g_focalLength = 35.0f;	// mm
-// inch
-float g_filmApertureWidth = 0.885f;
-float g_filmApertureHeight = 0.885f;
-static const float inchTomm = 25.4f;
-float g_zNear = 0.01f;
-float g_zFar = 1000.0f;
-// Img resolution in pixels
-const int g_imgWidth = 512;
-const int g_imgHeight = 512;
+using namespace Helper;
+using std::ofstream;
 
 // The mode doesn't change anything if device gate and film gate resolution are the same
 enum class ResolutionGateMode
@@ -64,9 +19,59 @@ enum class ResolutionGateMode
 };
 ResolutionGateMode g_resolutionGateMode = ResolutionGateMode::kOverscan;
 
-bool ComputePixelCoordinates(const Vec3f pWorld, Vec2i &pRaster, const Mat44f &worldToCamera,
+// Based on pinhole cam model
+void ComputeCanvasCoord(float focalLength, float zNear, ResolutionGateMode mode,
+    float filmGateW, float filmGateH,
+    int imgW, int imgH,
+    float* canvasB, float* canvasL, float* canvasT, float* canvasR)
+{
+    float inchToMM = 25.4f;
+	float filmAspectRatio = filmGateW / filmGateH;
+	float deviceAspectRatio = (float)imgW / imgH;
+	*canvasT = ((filmGateH * inchToMM ) / (2 * focalLength)) * zNear;
+	*canvasR = *canvasT * filmAspectRatio;
+
+	switch (mode)
+	{
+	default:
+	case ResolutionGateMode::kFill:
+	{
+		if (filmAspectRatio > deviceAspectRatio)
+		{
+			*canvasR *= deviceAspectRatio / filmAspectRatio;
+		}
+		else
+		{
+			*canvasT *= filmAspectRatio / deviceAspectRatio;
+		}
+        break;
+	}
+	case ResolutionGateMode::kOverscan:
+	{
+		if (filmAspectRatio > deviceAspectRatio)
+		{
+			*canvasT *= filmAspectRatio / deviceAspectRatio;
+		}
+		else
+		{
+			*canvasR *= deviceAspectRatio / filmAspectRatio;
+		}
+        break;
+	}
+	}
+
+	*canvasB = -*canvasT;
+	*canvasL = -*canvasR;
+
+	printf("Screen window coordinates: %f %f %f %f\n", *canvasB, *canvasL, *canvasT, *canvasR); 
+    printf("Film Aspect Ratio: %f\nDevice Aspect Ratio: %f\n", filmAspectRatio, deviceAspectRatio); 
+    printf("Angle of view: %f (deg)\n", 2 * atan((filmGateW * inchToMM / 2) / focalLength) * 180 / 3.14159265359f);
+
+}
+
+void ConvertToRaster(const Vec3f pWorld, Vec3f* pRaster, const Mat44f &worldToCamera,
 	float canvasB, float canvasL, float canvasT, float canvasR,
-	unsigned imageWidth, unsigned imageHeight, float zNear)
+	unsigned imageW, unsigned imageH, float zNear)
 {
 	bool isVisible = true;
 
@@ -75,21 +80,14 @@ bool ComputePixelCoordinates(const Vec3f pWorld, Vec2i &pRaster, const Mat44f &w
 	worldToCamera.MultiplyVecMat(pWorld, &pCamera);
 	// Perspective divide
 	Vec2f pScreen{ pCamera.x / -pCamera.z * zNear, pCamera.y / -pCamera.z * zNear };
-	// From screen space, convert to NDC space.
+	// From screen space, convert to NDC space [-1, 1]
 	Vec2f pNDC;
-	pNDC.x = (pScreen.x + canvasR) * (1.0f / (canvasR * 2));
-	pNDC.y = (pScreen.y + canvasT) * (1.0f / (canvasT * 2));
+    pNDC.x = (2 * pScreen.x) / (canvasR - canvasL) - (canvasR + canvasL) / (canvasR - canvasL);
+    pNDC.y = (2 * pScreen.y) / (canvasT - canvasB) - (canvasT + canvasB) / (canvasT - canvasB);
 	// From NDC space to raster space.
-	pRaster.x = (int)(pNDC.x * imageWidth);
-	pRaster.y = (int)((1.0f - pNDC.y) * imageHeight);
-
-	if (pScreen.x < canvasL || pScreen.x > canvasR ||
-		pScreen.y < canvasB || pScreen.y > canvasT)
-	{
-		isVisible = false;
-	}
-
-	return isVisible;
+	pRaster->x = (pNDC.x + 1.0f) / 2 * imageW;
+	pRaster->y = (1.0f - pNDC.y) / 2 * imageH;
+    pRaster->z = -pCamera.z;
 }
 
 // (c-a) Cross (b-a)
@@ -98,7 +96,6 @@ inline float EdgeFunction(const Vec3f& a, const Vec3f& b, const Vec3f& c)
     float result = (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
     return result;
 }
-typedef unsigned char RGB[3];
 
 // Pls remember not to pass a vector with z-value of 0.
 inline float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2)
@@ -108,236 +105,165 @@ inline float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, flo
     return depth;
 }
 
-using std::ofstream;
+// Pinhole camera settings
+float g_focalLength = 35.0f;	// mm
+float g_filmGateW = 0.885f;     // inch
+float g_filmGateH = 0.885f;
+
+float g_zNear = 1.0f;
+float g_zFar = 1000.0f;
+
+// Img resolution in pixels
+const unsigned g_imgW = 640;
+const unsigned g_imgH = 480;
+const Mat44f g_worldToCam = {0.707107f, -0.331295f, 0.624695f, 0.0f,
+    0.0f, 0.883452f, 0.468521f, 0.0f,
+    -0.707107f, -0.331295f, 0.624695f, 0.0f,
+    -1.63871f, -5.747777f, -40.400412f, 1.0f};
+
+
 int main()
 {
-#if 0
-	// Compute canvas coords
-	float filmAspectRatio = g_filmApertureWidth / g_filmApertureHeight;
-	float deviceAspectRatio = (float)g_imgWidth / g_imgHeight;
-	float canvasT = ((g_filmApertureHeight * inchTomm) / (2 * g_focalLength)) * g_zNear;
-	float canvasR = canvasT * filmAspectRatio;
+    float canvasB, canvasL, canvasT, canvasR;
+    ComputeCanvasCoord(g_focalLength, g_zNear, g_resolutionGateMode,
+        g_filmGateW, g_filmGateH, g_imgW, g_imgH,
+        &canvasB, &canvasL, &canvasT, &canvasR);
 
-	switch (g_resolutionGateMode)
-	{
-	default:
-	case ResolutionGateMode::kFill:
-	{
-		if (filmAspectRatio > deviceAspectRatio)
-		{
-			canvasR *= deviceAspectRatio / filmAspectRatio;
-		}
-		else
-		{
-			canvasT *= filmAspectRatio / deviceAspectRatio;
-		}
-	}
-	case ResolutionGateMode::kOverscan:
-	{
-		if (filmAspectRatio > deviceAspectRatio)
-		{
-			canvasT *= filmAspectRatio / deviceAspectRatio;
-		}
-		else
-		{
-			canvasR *= deviceAspectRatio / filmAspectRatio;
-		}
-	}
-	}
+    Math::Vec3<unsigned char>* frameBuffer = new Math::Vec3<unsigned char>[g_imgW * g_imgH];
+    std::fill(frameBuffer, frameBuffer + g_imgW * g_imgH, Math::Vec3<unsigned char>{0x19});
 
-	float canvasB = -canvasT;
-	float canvasL = -canvasR;
-    float canvasWidth = 2, canvasHeight = 2;
+    float* depthBuffer{new float[g_imgW * g_imgH]};
+    std::fill(depthBuffer, depthBuffer + g_imgW * g_imgH, g_zFar);
+    
+    Timer t;
+    t.SetManual(true);
+    t.Start();
 
-	printf("Screen window coordinates: %f %f %f %f\n", canvasB, canvasL, canvasT, canvasR); 
-    printf("Film Aspect Ratio: %f\nDevice Aspect Ratio: %f\n", filmAspectRatio, deviceAspectRatio); 
-    printf("Angle of view: %f (deg)\n", 2 * atan((g_filmApertureWidth * inchTomm / 2) / g_focalLength) * 180 / 3.14159265359f);
-
-	ofstream ofs{"./proj.svg"};
-	ofs << "<svg version=\"1.1f\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xmlns=\"http://www.w3.org/2000/svg\" height=\"512\" width=\"512\">\n";
-
-	// We exported the cam matrix from Maya. We need to compute its inverse, which is the mat used
-	// in ComputePixelCoord()
-    Mat44f cameraToWorld(-0.95424f, 0.0f, 0.299041f, 0.0f, 0.0861242f, 0.95763f, 0.274823f, 0.0f, -0.28637f, 0.288002f, -0.913809f, 0.0f, -3.734612f, 7.610426f, -14.152769f, 1.0f); 
-    Mat44f worldToCamera = cameraToWorld.Inverse(); 
-    std::cerr << worldToCamera << std::endl;
-
-	for (uint32_t i = 0; i < g_numTris; ++i) {
-		const Vec3f &v0World = g_verts[g_trisIndices[i * 3]];
-		const Vec3f &v1World = g_verts[g_trisIndices[i * 3 + 1]];
-		const Vec3f &v2World = g_verts[g_trisIndices[i * 3 + 2]];
-		Vec2i v0Raster, v1Raster, v2Raster;
-
-		bool isVisible = true;
-		isVisible &= ComputePixelCoordinates(v0World, v0Raster, worldToCamera, canvasB, canvasL, canvasT, canvasR, g_imgWidth, g_imgHeight, g_zNear);
-		isVisible &= ComputePixelCoordinates(v1World, v1Raster, worldToCamera, canvasB, canvasL, canvasT, canvasR, g_imgWidth, g_imgHeight, g_zNear);
-		isVisible &= ComputePixelCoordinates(v2World, v2Raster, worldToCamera, canvasB, canvasL, canvasT, canvasR, g_imgWidth, g_imgHeight, g_zNear);
-
-		int val = isVisible ? 0 : 255;
-		ofs << "<line x1=\"" << v0Raster.x << "\" y1=\"" << v0Raster.y << "\" x2=\"" << v1Raster.x << "\" y2=\"" << v1Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
-		ofs << "<line x1=\"" << v1Raster.x << "\" y1=\"" << v1Raster.y << "\" x2=\"" << v2Raster.x << "\" y2=\"" << v2Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
-		ofs << "<line x1=\"" << v2Raster.x << "\" y1=\"" << v2Raster.y << "\" x2=\"" << v0Raster.x << "\" y2=\"" << v0Raster.y << "\" style=\"stroke:rgb(" << val << ",0,0);stroke-width:1\" />\n";
-	}
-	ofs << "</svg>\n";
-	ofs.close();
-#endif
-
-    RGB* frameBuffer = new RGB[g_imgWidth * g_imgHeight];
-    memset(frameBuffer, 0x191819, g_imgWidth * g_imgHeight * 3);
-
-    float* depthBuffer{new float[g_imgWidth * g_imgHeight]};
-    std::fill(depthBuffer, depthBuffer + g_imgWidth * g_imgHeight, FLT_MAX);
-
-    // Coords in cam space, in CW winding order. v0 is further (green), then v1 (red)
-    Vec3f v0{ 13.0f,  34.0f, 114.0f}; 
-    Vec3f v1{ 29.0f, -15.0f,  44.0f}; 
-    Vec3f v2{-48.0f, -10.0f,  82.0f}; 
-    // Perspective projection
-    v0.x /= v0.z; v0.y /= v0.z;
-    v1.x /= v1.z; v1.y /= v1.z;
-    v2.x /= v2.z; v2.y /= v2.z;
-    // Convert to NDC space, then to raster space (assuming screen width and height = 2)
-    v0.x = (1 + v0.x) * 0.5f * g_imgWidth; v0.y = (1 + v0.y) * 0.5f * g_imgHeight;
-    v1.x = (1 + v1.x) * 0.5f * g_imgWidth; v1.y = (1 + v1.y) * 0.5f * g_imgHeight;
-    v2.x = (1 + v2.x) * 0.5f * g_imgWidth; v2.y = (1 + v2.y) * 0.5f * g_imgHeight;
-
-#ifdef TEXTURE_COORD
-    // Texture coords
-    Vec2f st0{0.0f, 0.0f};
-    Vec2f st1{1.0f, 0.0f};
-    Vec2f st2{0.0f, 1.0f};
-
-#ifdef PERSP_CORRECT
-    st0.x /= v0.z; st0.y /= v0.z;
-    st1.x /= v1.z; st1.y /= v1.z;
-    st2.x /= v2.z; st2.y /= v2.z;
-#endif
-#endif
-
-    float wTriangle = EdgeFunction(v0, v1, v2);
-
-    Vec3f c0{0.0f, 0.0f, 1.0f}; 
-    Vec3f c1{0.0f, 1.0f, 0.0f}; 
-    Vec3f c2{1.0f, 0.0f, 0.0f}; 
-#ifdef PERSP_CORRECT
-    c0.x /= v0.z; c0.y /= v0.z; c0.z /= v0.z;
-    c1.x /= v1.z; c1.y /= v1.z; c1.z /= v1.z;
-    c2.x /= v2.z; c2.y /= v2.z; c2.z /= v2.z;
-#endif
-
-#ifdef TEST_VISIBILITY
-    // Our white tri, which should overlap the colored tri.
-    Vec3f v3{-17.0f,  10.0f, 50.0f};
-    Vec3f v4{ 17.0f, -20.0f, 50.0f};
-    Vec3f v5{-17.0f, -20.0f, 50.0f};
-    // Perspective projection
-    v3.x /= v3.z; v3.y /= v3.z;
-    v4.x /= v4.z; v4.y /= v4.z;
-    v5.x /= v5.z; v5.y /= v5.z;
-    // Convert to NDC space, then to raster space (assuming screen width and height = 2)
-    v3.x = (1 + v3.x) * 0.5f * g_imgWidth; v3.y = (1 + v3.y) * 0.5f * g_imgHeight;
-    v4.x = (1 + v4.x) * 0.5f * g_imgWidth; v4.y = (1 + v4.y) * 0.5f * g_imgHeight;
-    v5.x = (1 + v5.x) * 0.5f * g_imgWidth; v5.y = (1 + v5.y) * 0.5f * g_imgHeight;
-
-    float wTriangle2 = EdgeFunction(v3, v4, v5);
-#endif
-
-    for (int j = 0; j < g_imgHeight; ++j)
+    for (int i = 0; i < g_numTris; ++i)
     {
-        for (int i = 0; i < g_imgWidth; ++i)
+        const Vec3f& v0 = g_verts[g_trisIndices[i * 3]];
+        const Vec3f& v1 = g_verts[g_trisIndices[i * 3 + 1]];
+        const Vec3f& v2 = g_verts[g_trisIndices[i * 3 + 2]];
+
+        const Vec2f& st0 = g_st[g_stIndices[i * 3]];
+        const Vec2f& st1 = g_st[g_stIndices[i * 3 + 1]];
+        const Vec2f& st2 = g_st[g_stIndices[i * 3 + 2]];
+
+        Vec3f v0Raster, v1Raster, v2Raster;
+        ConvertToRaster(v0, &v0Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear);
+        ConvertToRaster(v1, &v1Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear);
+        ConvertToRaster(v2, &v2Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear);
+
+        // Is triangle within screen boundary?
+        float xMin = Min3(v0Raster.x, v1Raster.x, v2Raster.x);
+        float yMin = Min3(v0Raster.y, v1Raster.y, v2Raster.y);
+        float xMax = Max3(v0Raster.x, v1Raster.x, v2Raster.x);
+        float yMax = Max3(v0Raster.y, v1Raster.y, v2Raster.y);
+        if (xMin > (float)g_imgW - 1 || xMax < 0.0f || yMin > (float)g_imgH - 1 || yMax < 0.0f) { continue; }
+
+        Math::Vec2<unsigned> bbMin, bbMax;
+        // Don't cast to unsigned, because xMin could be (-)
+        bbMin.x = std::max(0, (int)std::floor(xMin));
+        bbMin.y = std::max(0, (int)std::floor(yMin));
+        bbMax.x = std::min((int)g_imgW - 1, (int)std::floor(xMax));
+        bbMax.y = std::min((int)g_imgH - 1, (int)std::floor(yMax));
+
+        float wTri = EdgeFunction(v0Raster, v1Raster, v2Raster);
+        Vec3f pMin{bbMin.x + 0.5f, bbMin.y + 0.5f, 0.0f};
+        float edge12Row = EdgeFunction(v1Raster, v2Raster, pMin);
+        float edge20Row = EdgeFunction(v2Raster, v0Raster, pMin);
+        float edge01Row = EdgeFunction(v0Raster, v1Raster, pMin);
+        for (unsigned y = bbMin.y; y <= bbMax.y; ++y)
         {
-            Vec3f p{ i + 0.5f, g_imgHeight - j + 0.5f, 0.0f };
-            float w0 = EdgeFunction(v1, v2, p) / wTriangle;
-            float w1 = EdgeFunction(v2, v0, p) / wTriangle;
-            float w2 = EdgeFunction(v0, v1, p) / wTriangle;
-
-#ifdef TEXTURE_COORD
-            if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+            float edge12 = edge12Row;
+            float edge20 = edge20Row;
+            float edge01 = edge01Row;
+            Vec3f v12 = v2Raster - v1Raster;
+            Vec3f v20 = v0Raster - v2Raster;
+            Vec3f v01 = v1Raster - v0Raster;
+            for (unsigned x = bbMin.x; x <= bbMax.x; ++x)
             {
-                float s = st0.x * w0 + st1.x * w1 + st2.x * w2;
-                float t = st0.y * w0 + st1.y * w1 + st2.y * w2;
-
-#ifdef PERSP_CORRECT
-                float depthVal = ComputeDepth(v0, v1, v2, w0, w1, w2);
-                s *= depthVal;
-                t *= depthVal;
+                // CW winding order
+#if 0
+                Vec3f pixel{x + 0.5f, y + 0.5f, 0.0f};
+                float w0 = EdgeFunction(v1Raster, v2Raster, pixel);
+                float w1 = EdgeFunction(v2Raster, v0Raster, pixel);
+                float w2 = EdgeFunction(v0Raster, v1Raster, pixel);
+                ofs1 << w0 << " " << w1 << " " << w2 << "\n";
 #endif
-
-                const int m = 10;
-                // Checkerboard pattern
-                float p = (fmod(s * m, 1.0f) > 0.5f) ^ (fmod(t * m, 1.0f) < 0.5f);
-                frameBuffer[j * g_imgWidth + i][0] = (unsigned char)(p * 255.0f);
-                frameBuffer[j * g_imgWidth + i][1] = (unsigned char)(p * 255.0f);
-                frameBuffer[j * g_imgWidth + i][2] = (unsigned char)(p * 255.0f);
-            }
-#else
-#ifdef TEST_VISIBILITY
-            float w3 = EdgeFunction(v4, v5, p) / wTriangle2;
-            float w4 = EdgeFunction(v5, v3, p) / wTriangle2;
-            float w5 = EdgeFunction(v3, v4, p) / wTriangle2;
-#endif
-
-            // Check if pixel overlaps the tri. If we use barycentric coords directly, we don't care
-            // about winding order.
-            bool doesOverlap = false;
-            float r, g, b;
-            if (w0 >= 0 && w1 >= 0 && w2 >= 0)
-            {
-                doesOverlap = true;
-                float depthVal = ComputeDepth(v0, v1, v2, w0, w1, w2);
-                if (depthVal < depthBuffer[j * g_imgWidth + i])
+                // Top-left rule
+                bool overlap = true;
+                overlap &= (edge12 == 0 ? ((v12.y == 0 && v12.x > 0) || v12.y > 0) : edge12 >= 0.0f);
+                overlap &= (edge20 == 0 ? ((v20.y == 0 && v20.x > 0) || v20.y > 0) : edge20 >= 0.0f);
+                overlap &= (edge01 == 0 ? ((v01.y == 0 && v01.x > 0) || v01.y > 0) : edge01 >= 0.0f);
+                if (overlap)
                 {
-                    r = c0[0] * w0 + c1[0] * w1 + c2[0] * w2;
-                    g = c0[1] * w0 + c1[1] * w1 + c2[1] * w2;
-                    b = c0[2] * w0 + c1[2] * w1 + c2[2] * w2;
+                    float w0 = edge12 / wTri;
+                    float w1 = edge20 / wTri;
+                    float w2 = edge01 / wTri;
+                    float z = ComputeDepth(v0Raster, v1Raster, v2Raster, w0, w1, w2);
+                    // Depth buffer test
+                    if (z < depthBuffer[y * g_imgW + x])
+                    {
+                        depthBuffer[y * g_imgW + x] = z;
 
+                        Vec2f st0Attribute = st0 * (1 / v0Raster.z);
+                        Vec2f st1Attribute = st1 * (1 / v1Raster.z);
+                        Vec2f st2Attribute = st2 * (1 / v2Raster.z);
+                        Vec2f st = (st0Attribute * w0 + st1Attribute * w1 + st2Attribute * w2) * z;
 
-                    depthBuffer[j * g_imgWidth + i] = depthVal;
-#ifdef PERSP_CORRECT
-                    r *= depthVal;
-                    g *= depthVal;
-                    b *= depthVal;
+                        // Facing ratio
+                        // Compute pt in cam space, the pt is treated as vertex attribute
+                        Vec3f v0Cam, v1Cam, v2Cam;
+                        g_worldToCam.MultiplyVecMat(v0, &v0Cam);
+                        g_worldToCam.MultiplyVecMat(v1, &v1Cam);
+                        g_worldToCam.MultiplyVecMat(v2, &v2Cam);
+                        
+                        Vec3f ptCam;
+                        ptCam.x = w0 * (v0Cam.x / -v0Cam.z) + w1 * (v1Cam.x / -v1Cam.z) + w2 * (v2Cam.x / -v2Cam.z);
+                        ptCam.y = w0 * (v0Cam.y / -v0Cam.z) + w1 * (v1Cam.y / -v1Cam.z) + w2 * (v2Cam.y / -v2Cam.z);
+                        ptCam.z = -1;
+                        ptCam *= z;
 
-#endif
+                        // View direction: vec from cam to pt of the currently shaded triangle. Because cam pos is
+                        // (0,0,0), if we compute the shaded pt shadedPt in cam space, view direction = -shadedPt
+                        Vec3f viewDir{-ptCam.x, -ptCam.y, -ptCam.z};
+                        viewDir.Normalize();
+
+                        Vec3f triNormal = (v1Cam - v0Cam).Cross(v2Cam - v0Cam);
+                        triNormal.Normalize();
+
+                        float nDotView = std::max(0.0f, triNormal.Dot(viewDir));
+                        const int m = 10;
+                        float checker = (std::fmod(st.x * m, 1.0f) > 0.5f) ^ (std::fmod(st.y * m, 1.0f) < 0.5f);
+                        float c = 0.3f * (1.0f - checker) + 0.7f * checker;
+                        nDotView *= c;
+
+                        frameBuffer[y *g_imgW + x][0] = (nDotView * 255.0f);
+                        frameBuffer[y *g_imgW + x][1] = (nDotView * 255.0f);
+                        frameBuffer[y *g_imgW + x][2] = (nDotView * 255.0f);
+                        
+                    }
                 }
-            }
+                // 1px to the right
+                edge12 += v12.y;
+                edge20 += v20.y;
+                edge01 += v01.y;
 
-#ifdef TEST_VISIBILITY
-            if (w3 >= 0 && w4 >= 0 && w5 >= 0)
-            {
-                doesOverlap = true;
-                float depthVal = ComputeDepth(v3, v4, v5, w3, w4, w5);
-                if (depthVal < depthBuffer[j * g_imgWidth + i])
-                {
-                    r = 1.0f;
-                    g = 1.0f;
-                    b = 1.0f;
-                    depthBuffer[j * g_imgWidth + i] = depthVal;
-                }
             }
-#endif
+            // 1px row below
+            edge12Row -= v12.x;
+            edge20Row -= v20.x;
+            edge01Row -= v01.x;
 
-            if (doesOverlap)
-            {
-#ifdef DRAW_DEPTH
-                // This is the greyscale img. Closer means that it appears brighter.
-                frameBuffer[j * g_imgWidth + i][0] = (unsigned char)((1 - depthBuffer[j * g_imgWidth + i] / 115.0f) * 255.0f);
-                frameBuffer[j * g_imgWidth + i][1] = (unsigned char)((1 - depthBuffer[j * g_imgWidth + i] / 115.0f) * 255.0f);
-                frameBuffer[j * g_imgWidth + i][2] = (unsigned char)((1 - depthBuffer[j * g_imgWidth + i] / 115.0f) * 255.0f);
-#else
-                frameBuffer[j * g_imgWidth + i][0] = (unsigned char)(r * 255.0f);
-                frameBuffer[j * g_imgWidth + i][1] = (unsigned char)(g * 255.0f);
-                frameBuffer[j * g_imgWidth + i][2] = (unsigned char)(b * 255.0f);
-#endif
-            }
-
-#endif
         }
     }
 
-    ofstream ofs{"./tri.ppm", ofstream::out | ofstream::binary};
-    ofs << "P6\n" << g_imgWidth << " " << g_imgHeight << "\n255\n";
-    ofs.write((char*)frameBuffer, g_imgWidth * g_imgHeight * 3);
+    t.Stop();
+
+    ofstream ofs{"./cow.ppm", ofstream::out | ofstream::binary};
+    ofs << "P6\n" << g_imgW << " " << g_imgH << "\n255\n";
+    ofs.write((char*)frameBuffer, g_imgW * g_imgH * 3);
     ofs.close();
 
     delete[] frameBuffer;
