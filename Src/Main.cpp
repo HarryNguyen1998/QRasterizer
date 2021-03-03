@@ -3,12 +3,12 @@
 #include "Vertices.h"
 
 #include <algorithm>
+#include <cmath>
+#include <fstream>
 #include <iostream>
 #include <string>
-#include <fstream>
-#include <cmath>
+#include <vector>
 
-using namespace Helper;
 using std::ofstream;
 
 // The mode doesn't change anything if device gate and film gate resolution are the same
@@ -20,7 +20,7 @@ enum class ResolutionGateMode
 ResolutionGateMode g_resolutionGateMode = ResolutionGateMode::kOverscan;
 
 // Based on pinhole cam model
-void ComputeCanvasCoord(float focalLength, float zNear, ResolutionGateMode mode,
+void GetCanvasCoord(float focalLength, float zNear, ResolutionGateMode mode,
     float filmGateW, float filmGateH,
     int imgW, int imgH,
     float* canvasB, float* canvasL, float* canvasT, float* canvasR)
@@ -69,21 +69,28 @@ void ComputeCanvasCoord(float focalLength, float zNear, ResolutionGateMode mode,
 
 }
 
-void ConvertToRaster(const Vec3f pWorld, Vec3f* pRaster, const Mat44f &worldToCamera,
-	float canvasB, float canvasL, float canvasT, float canvasR,
-	unsigned imageW, unsigned imageH, float zNear)
+Mat44f GetProjetionMatrix(float t, float r, float l, float b,
+    float n, float f)
 {
-	bool isVisible = true;
+    Mat44f result{};
+    result(0, 0) = (2 * n) / (r - l);
+    result(1, 1) = (2 * n) / (t - b);
+    result(2, 0) = (r + l) / (r - l);
+    result(2, 1) = (t + b) / (t - b);
+    result(2, 2) = -(f + n) / (f - n);
+    result(2, 3) = -1.0f;
+    result(3, 2) = -(2 * f * n) / (f - n);
 
-	// Convert from world space to cam space
-	Vec3f pCamera;
-	worldToCamera.MultiplyVecMat(pWorld, &pCamera);
-	// Perspective divide
-	Vec2f pScreen{ pCamera.x / -pCamera.z * zNear, pCamera.y / -pCamera.z * zNear };
-	// From screen space, convert to NDC space [-1, 1]
-	Vec2f pNDC;
-    pNDC.x = (2 * pScreen.x) / (canvasR - canvasL) - (canvasR + canvasL) / (canvasR - canvasL);
-    pNDC.y = (2 * pScreen.y) / (canvasT - canvasB) - (canvasT + canvasB) / (canvasT - canvasB);
+    return result;
+}
+
+void ConvertToRaster(const Vec3f pWorld, Vec3f* pRaster, const Mat44f &worldToCamera,
+	float b, float l, float t, float r,
+	unsigned imageW, unsigned imageH, float zNear, float zFar)
+{
+    Vec3f pCamera = MultiplyVecMat(pWorld, worldToCamera);
+    Mat44f projMat = GetProjetionMatrix(t, r, l, b, zNear, zFar);
+    Vec3f pNDC = MultiplyPtMat(pCamera, projMat);
 	// From NDC space to raster space.
 	pRaster->x = (pNDC.x + 1.0f) / 2 * imageW;
 	pRaster->y = (1.0f - pNDC.y) / 2 * imageH;
@@ -103,6 +110,90 @@ inline float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, flo
     float depthInverse = (w0 / v0.z) + (w1 / v1.z) + (w2 / v2.z);
     float depth = (1 / depthInverse);
     return depth;
+}
+
+// Func implementation is based on when dx and dy are (+), and the line is gentle (dx > dy). To account for other
+// case, swap x and y when passing in arguments
+void DrawLine2Axis(Math::Vector<unsigned char, 3>* pixels, const Math::Vector<unsigned char, 3>& color,
+    int xStep, int yStep,
+    int dx, int dy)
+{
+    // Draw starting pt
+    *pixels = color;
+    int dTimes2 = 2 * dy - dx;
+
+    // Not --dx because dx could be 0, e.g., a point!!
+    while (dx--)
+    {
+        if (dTimes2 > 0)
+        {
+            pixels += xStep + yStep;
+            dTimes2 += 2 * (dy - dx);
+        }
+        else
+        {
+            pixels += xStep;
+            dTimes2 += 2 * dy;
+        }
+
+        *pixels = color;
+    }
+}
+
+// Func implementation is based on when drawing a horizontal line. To account for other case, swap x and y when
+// passing in arguments
+void DrawLineSingleAxis(Math::Vector<unsigned char, 3>* pixels, const Math::Vector<unsigned char, 3>& color,
+    int xStep, int dx)
+{
+    // Draw starting pt
+    *pixels = color;
+    while (dx--)
+    {
+        pixels += xStep;
+        *pixels = color;
+    }
+}
+
+// Resource: https://blog.demofox.org/2015/01/17/bresenhams-drawing-algorithms/
+void DrawLine(Math::Vector<unsigned char, 3>* pixels, const Math::Vector<unsigned char, 3>& color, int pixelStride,
+    int x0, int x1, int y0, int y1)
+{
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    // Steep/high line, y is major axis
+    if (std::abs(dy) > std::abs(dx))    
+    {
+        if (dy < 0)
+        {
+            dy = -dy;
+            dx = -dx;
+            std::swap(x0, x1);
+            std::swap(y0, y1);
+        }
+        auto* startPixels = &pixels[y0 * pixelStride + x0];
+
+        if (dx > 0) { DrawLine2Axis(startPixels, color, pixelStride, 1, dy, dx); }
+        else if (dx < 0) { DrawLine2Axis(startPixels, color, pixelStride, -1, dy, -dx); }
+        else { DrawLineSingleAxis(startPixels, color, pixelStride, dy); }
+    }
+
+    // Gentle line, x is major axis
+    else 
+    {
+        if (dx < 0)
+        {
+            dx = -dx;
+            dy = -dy;
+            std::swap(x0, x1);
+            std::swap(y0, y1);
+        }
+        auto* startPixels = &pixels[y0 * pixelStride + x0];
+
+        if (dy > 0) { DrawLine2Axis(startPixels, color, 1, pixelStride, dx, dy); }
+        else if (dy < 0) { DrawLine2Axis(startPixels, color, 1, -pixelStride, dx, -dy); }
+        else { DrawLineSingleAxis(startPixels, color, 1, dx); }
+    }
+        
 }
 
 // Pinhole camera settings
@@ -125,17 +216,14 @@ const Mat44f g_worldToCam = {0.707107f, -0.331295f, 0.624695f, 0.0f,
 int main()
 {
     float canvasB, canvasL, canvasT, canvasR;
-    ComputeCanvasCoord(g_focalLength, g_zNear, g_resolutionGateMode,
+    GetCanvasCoord(g_focalLength, g_zNear, g_resolutionGateMode,
         g_filmGateW, g_filmGateH, g_imgW, g_imgH,
         &canvasB, &canvasL, &canvasT, &canvasR);
 
-    Math::Vec3<unsigned char>* frameBuffer = new Math::Vec3<unsigned char>[g_imgW * g_imgH];
-    std::fill(frameBuffer, frameBuffer + g_imgW * g_imgH, Math::Vec3<unsigned char>{0x19});
-
-    float* depthBuffer{new float[g_imgW * g_imgH]};
-    std::fill(depthBuffer, depthBuffer + g_imgW * g_imgH, g_zFar);
+    std::vector<Math::Vector<unsigned char, 3>> frameBuffer(g_imgW * g_imgH, Math::Vector<unsigned char, 3>{50, 50, 50});
+    std::vector<float> depthBuffer(g_imgW * g_imgH, FLT_MAX);
     
-    Timer t;
+    Helper::Timer t;
     t.SetManual(true);
     t.Start();
 
@@ -150,18 +238,31 @@ int main()
         const Vec2f& st2 = g_st[g_stIndices[i * 3 + 2]];
 
         Vec3f v0Raster, v1Raster, v2Raster;
-        ConvertToRaster(v0, &v0Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear);
-        ConvertToRaster(v1, &v1Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear);
-        ConvertToRaster(v2, &v2Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear);
+        ConvertToRaster(v0, &v0Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear, g_zFar);
+        ConvertToRaster(v1, &v1Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear, g_zFar);
+        ConvertToRaster(v2, &v2Raster, g_worldToCam, canvasB, canvasL, canvasT, canvasR, g_imgW, g_imgH, g_zNear, g_zFar);
 
-        // Is triangle within screen boundary?
-        float xMin = Min3(v0Raster.x, v1Raster.x, v2Raster.x);
-        float yMin = Min3(v0Raster.y, v1Raster.y, v2Raster.y);
-        float xMax = Max3(v0Raster.x, v1Raster.x, v2Raster.x);
-        float yMax = Max3(v0Raster.y, v1Raster.y, v2Raster.y);
+        // Is triangle within screen boundary? No clipping yet
+        float xMin = Helper::Min3(v0Raster.x, v1Raster.x, v2Raster.x);
+        float yMin = Helper::Min3(v0Raster.y, v1Raster.y, v2Raster.y);
+        float xMax = Helper::Max3(v0Raster.x, v1Raster.x, v2Raster.x);
+        float yMax = Helper::Max3(v0Raster.y, v1Raster.y, v2Raster.y);
         if (xMin > (float)g_imgW - 1 || xMax < 0.0f || yMin > (float)g_imgH - 1 || yMax < 0.0f) { continue; }
+        Vec2i v0i{(int)v0Raster.x, (int)v0Raster.y};
+        Vec2i v1i{(int)v1Raster.x, (int)v1Raster.y};
+        Vec2i v2i{(int)v2Raster.x, (int)v2Raster.y};
+        Math::Vector<unsigned char, 3> color{255, 255, 255};
+#if 0
+        frameBuffer[v0i.y * g_imgW + v0i.x] = color;
+        frameBuffer[v1i.y * g_imgW + v1i.x] = color;
+        frameBuffer[v2i.y * g_imgW + v2i.x] = color;
+#endif
+        DrawLine(frameBuffer.data(), color, g_imgW, v0i.x, v1i.x, v0i.y, v1i.y);
+        DrawLine(frameBuffer.data(), color, g_imgW, v1i.x, v2i.x, v1i.y, v2i.y);
+        DrawLine(frameBuffer.data(), color, g_imgW, v2i.x, v0i.x, v2i.y, v0i.y);
 
-        Math::Vec2<unsigned> bbMin, bbMax;
+#if 0
+        Math::Vector<unsigned, 2> bbMin, bbMax;
         // Don't cast to unsigned, because xMin could be (-)
         bbMin.x = std::max(0, (int)std::floor(xMin));
         bbMin.y = std::max(0, (int)std::floor(yMin));
@@ -189,7 +290,6 @@ int main()
                 float w0 = EdgeFunction(v1Raster, v2Raster, pixel);
                 float w1 = EdgeFunction(v2Raster, v0Raster, pixel);
                 float w2 = EdgeFunction(v0Raster, v1Raster, pixel);
-                ofs1 << w0 << " " << w1 << " " << w2 << "\n";
 #endif
                 // Top-left rule
                 bool overlap = true;
@@ -214,10 +314,9 @@ int main()
 
                         // Facing ratio
                         // Compute pt in cam space, the pt is treated as vertex attribute
-                        Vec3f v0Cam, v1Cam, v2Cam;
-                        g_worldToCam.MultiplyVecMat(v0, &v0Cam);
-                        g_worldToCam.MultiplyVecMat(v1, &v1Cam);
-                        g_worldToCam.MultiplyVecMat(v2, &v2Cam);
+                        Vec3f v0Cam = MultiplyVecMat(v0, g_worldToCam);
+                        Vec3f v1Cam = MultiplyVecMat(v1, g_worldToCam);
+                        Vec3f v2Cam = MultiplyVecMat(v2, g_worldToCam);
                         
                         Vec3f ptCam;
                         ptCam.x = w0 * (v0Cam.x / -v0Cam.z) + w1 * (v1Cam.x / -v1Cam.z) + w2 * (v2Cam.x / -v2Cam.z);
@@ -228,20 +327,20 @@ int main()
                         // View direction: vec from cam to pt of the currently shaded triangle. Because cam pos is
                         // (0,0,0), if we compute the shaded pt shadedPt in cam space, view direction = -shadedPt
                         Vec3f viewDir{-ptCam.x, -ptCam.y, -ptCam.z};
-                        viewDir.Normalize();
+                        Vec3f viewDirNormalized = Math::Normal<float, 3>(viewDir);
 
-                        Vec3f triNormal = (v1Cam - v0Cam).Cross(v2Cam - v0Cam);
-                        triNormal.Normalize();
+                        Vec3f triNormal = Math::Cross<float, 3>(v1Cam - v0Cam, v2Cam - v0Cam);
+                        triNormal = Math::Normal<float, 3>(triNormal);
 
-                        float nDotView = std::max(0.0f, triNormal.Dot(viewDir));
-                        const int m = 10;
-                        float checker = (std::fmod(st.x * m, 1.0f) > 0.5f) ^ (std::fmod(st.y * m, 1.0f) < 0.5f);
+                        float nDotView = std::max(0.0f, Math::Dot<float, 3>(triNormal, viewDirNormalized));
+                        const float m = 10.0f;
+                        float checker = (float)((std::fmod(st.x * m, 1.0f) > 0.5f) ^ (std::fmod(st.y * m, 1.0f) < 0.5f));
                         float c = 0.3f * (1.0f - checker) + 0.7f * checker;
                         nDotView *= c;
 
-                        frameBuffer[y *g_imgW + x][0] = (nDotView * 255.0f);
-                        frameBuffer[y *g_imgW + x][1] = (nDotView * 255.0f);
-                        frameBuffer[y *g_imgW + x][2] = (nDotView * 255.0f);
+                        frameBuffer[y * g_imgW + x][0] = (unsigned char)(nDotView * 255.0f);
+                        frameBuffer[y * g_imgW + x][1] = (unsigned char)(nDotView * 255.0f);
+                        frameBuffer[y * g_imgW + x][2] = (unsigned char)(nDotView * 255.0f);
                         
                     }
                 }
@@ -257,16 +356,15 @@ int main()
             edge01Row -= v01.x;
 
         }
+#endif
     }
 
     t.Stop();
 
     ofstream ofs{"./cow.ppm", ofstream::out | ofstream::binary};
     ofs << "P6\n" << g_imgW << " " << g_imgH << "\n255\n";
-    ofs.write((char*)frameBuffer, g_imgW * g_imgH * 3);
+    ofs.write((char*)frameBuffer.data(), g_imgW * g_imgH * 3);
     ofs.close();
 
-    delete[] frameBuffer;
-    delete[] depthBuffer;
 }
 

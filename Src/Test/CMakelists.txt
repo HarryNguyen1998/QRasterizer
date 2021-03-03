@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.7)
 
 add_executable(TestMath TestMath.cpp)
-target_link_libraries(TestMath Helper)
 add_test(Math TestMath)
 

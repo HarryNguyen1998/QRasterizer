@@ -1,268 +1,230 @@
 #pragma once
 #include "Helper.h"
 
-// For sqrt
-#include <cmath>
+#include <cmath>    // For sqrt
 
 namespace Math
 {
-	// Vector 2D math class.
-	// Note: Only use CompareFloat(), because after computation, some elements
-	// may have values like -0.0f
-	template<typename T>
-	struct Vec2
+	// Vector math class.
+	template<typename T, size_t Size, typename = std::enable_if_t<(Size > 1 && Size < 5)>>
+	struct Vector
 	{
-		Vec2() = default;
-		Vec2(T x);
-		Vec2(T x, T y);
-
-		// Vector addition and scaling
-		Vec2 operator+(const Vec2& v) const;
-		Vec2 operator-(const Vec2& v) const;
-		Vec2 operator*(T k) const;
-		Vec2& operator+=(const Vec2& v);
-		Vec2& operator-=(const Vec2& v);
-		Vec2& operator*=(T k);
-
-		T Dot(const Vec2<T>& v) const;
-		T LengthSqr() const;
-		T Length() const;
-        Vec2 Normal() const;
-        void Normalize();
-
 		// Access operator
-		const T& operator[](unsigned int i) const;
-		T& operator[](unsigned int i);
+        const T& operator[](size_t i) const { return e[i]; }
+        T& operator[](size_t i) { return e[i]; }
 
-		T x, y;
+		T e[Size];
 	};
-
-	// Vector 3D math class.
-	// Note: Only use CompareFloat(), because after computation, some elements
-	// may have values like -0.0f
-	template<typename T>
-	struct Vec3
-	{
-		// Ctor
-		Vec3() = default;
-		Vec3(T x);
-		Vec3(T x, T y, T z);
-
-		// Vector addition and scaling
-		Vec3 operator+(const Vec3& v) const;
-		Vec3 operator-(const Vec3& v) const;
-		Vec3 operator*(T k) const;
-		Vec3& operator+=(const Vec3& v);
-		Vec3& operator-=(const Vec3& v);
-		Vec3& operator*=(T k);
-
-		T Dot(const Vec3<T>& v) const;
-		Vec3 Cross(const Vec3<T>& v) const;
-		T LengthSqr() const;
-		T Length() const;
-        Vec3 Normal() const;
-        void Normalize();
-
-		// Access operator
-		const T& operator[](unsigned int i) const;
-		T& operator[](unsigned int i);
-
-		T x, y, z;
-	};
-
-	template<typename T>
-	inline Vec2<T>::Vec2(T x) : x(x), y(x) {}
-
-	template<typename T>
-	inline Vec2<T>::Vec2(T x, T y) : x(x), y(y) {}
-
-	template<typename T>
-	inline Vec2<T> Vec2<T>::operator+(const Vec2& v) const
-	{
-		return Vec2<T>{x + v.x, y + v.y};
-	}
-
-	template<typename T>
-	inline Vec2<T> Vec2<T>::operator-(const Vec2& v) const
-	{
-		return Vec2<T>{x - v.x, y - v.y};
-	}
-
-	template<typename T>
-	inline Vec2<T> Vec2<T>::operator*(T k) const
-	{
-		return Vec2<T>{x * k, y * k};
-	}
-
-	template<typename T>
-	inline Vec2<T>& Vec2<T>::operator+=(const Vec2& v)
-	{
-		x += v.x;
-		y += v.y;
-		return *this;
-	}
-
-	template<typename T>
-	inline Vec2<T>& Vec2<T>::operator-=(const Vec2& v)
-	{
-		x -= v.x;
-		y -= v.y;
-		return *this;
-	}
-
-	template<typename T>
-	inline Vec2<T>& Vec2<T>::operator*=(T k)
-	{
-		x *= k;
-		y *= k;
-		return *this;
-	}
-
-	template<typename T>
-	inline T Vec2<T>::Dot(const Vec2<T>& v) const
-	{
-		return (x * v.x + y * v.y);
-	}
-
-	template<typename T>
-	inline T Vec2<T>::LengthSqr() const
-	{
-		return (x * x + y * y);
-	}
-
-	template<typename T>
-	inline T Vec2<T>::Length() const
-	{
-		return sqrt(LengthSqr());
-	}
 
     template<typename T>
-    inline Vec2<T> Vec2<T>::Normal() const
+    struct Vector<T, 4>
     {
-        Vec2<T> result = *this *= (1 / Length());
+        Vector() : Vector{0} {}
+        explicit Vector(T val) : x(val), y(val), z(val), w(val) {}
+        Vector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+
+        // Access operator
+        const T& operator[](size_t i) const { return e[i]; }
+        T& operator[](size_t i) { return e[i]; }
+
+        union
+        {
+            T e[4];
+            struct { T x, y, z, w; };
+        };
+    };
+
+    template<typename T>
+    struct Vector<T, 3>
+    {
+        Vector() : Vector{0} {}
+        explicit Vector(T val) : x(val), y(val), z(val) {}
+        Vector(T x, T y, T z) : x(x), y(y), z(z) {}
+
+        // Access operator
+        const T& operator[](size_t i) const { return e[i]; }
+        T& operator[](size_t i) { return e[i]; }
+
+        union
+        {
+            T e[3];
+            struct { T x, y, z ; };
+        };
+    };
+
+    template<typename T>
+    struct Vector<T, 2>
+    {
+        Vector() : Vector{0} {}
+        explicit Vector(T val) : x(val), y(val) {}
+        Vector(T x, T y) : x(x), y(y) {}
+
+        // Access operator
+        const T& operator[](size_t i) const { return e[i]; }
+        T& operator[](size_t i) { return e[i]; }
+
+        union
+        {
+            T e[2];
+            struct { T x, y; };
+        };
+    };
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Vector operations: Dot, Cross, LengthSqr, Length, Normal
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+	template<typename T, size_t Size>
+	inline T Dot(const Vector<T, Size>& v1, const Vector<T, Size>& v2)
+	{
+        T result = 0;
+        for (int i = 0; i < Size; ++i) { result += v1[i] * v2[i]; }
+        return result;
+	}
+
+    template<typename T, size_t Size, typename = std::enable_if_t<(Size > 2)>>
+	inline Vector<T, Size> Cross(const Vector<T, Size>& v1, const Vector<T, Size>& v2)
+	{
+		return Vector<T, Size>(
+            v1[1] * v2[2] - v1[2] * v2[1],
+            v1[2] * v2[0] - v1[0] * v2[2],
+            v1[0] * v2[1] - v1[1] * v2[0]);
+	}
+
+	template<typename T, size_t Size>
+	inline T LengthSqr(const Vector<T, Size>& v)
+	{
+        T result = 0;
+        for (int i = 0; i < Size; ++i) { result += v[i] * v[i]; }
+		return result;
+	}
+
+	template<typename T, size_t Size>
+	inline T Length(const Vector<T, Size>& v)
+	{
+		return sqrt(LengthSqr(v));
+	}
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size> Normal(const Vector<T, Size>& v)
+    {
+        Vector<T, Size> result = v / Length(v);
         return result;
     }
 
-    template<typename T>
-    inline void Vec2<T>::Normalize()
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Vector overloaded operators: comparison, negation, adding and scaling, print to os
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    template<typename T, size_t Size>
+    inline bool operator==(const Vector<T, Size>& v1, const Vector<T, Size>& v2)
     {
-        *this *= (1 / Length());
-    }
-
-	template<typename T>
-	inline const T& Vec2<T>::operator[](unsigned int i) const
-	{
-		return (&x)[i];
-	}
-	template<typename T>
-	inline T& Vec2<T>::operator[](unsigned int i)
-	{
-		return (&x)[i];
-	}
-
-	template<typename T>
-	inline Vec3<T>::Vec3(T x) : x(x), y(x), z(x) {}
-
-	template<typename T>
-	inline Vec3<T>::Vec3(T x, T y, T z) : x(x), y(y), z(z) {}
-
-	template<typename T>
-	inline Vec3<T> Vec3<T>::operator+(const Vec3& v) const
-	{
-		return Vec3<T>(x + v.x, y + v.y, z + v.z);
-	}
-
-	template<typename T>
-	inline Vec3<T> Vec3<T>::operator-(const Vec3& v) const
-	{
-		return Vec3<T>(x - v.x, y - v.y, z - v.z);
-	}
-
-	template<typename T>
-	inline Vec3<T> Vec3<T>::operator*(T k) const
-	{
-		return Vec3<T>(x * k, y * k, z * k);
-	}
-
-	template<typename T>
-	inline Vec3<T>& Vec3<T>::operator+=(const Vec3& v)
-	{
-		x += v.x;
-		y += v.y;
-		z += v.z;
-		return *this;
-	}
-
-	template<typename T>
-	inline Vec3<T>& Vec3<T>::operator-=(const Vec3& v)
-	{
-		x -= v.x;
-		y -= v.y;
-		z -= v.z;
-		return *this;
-	}
-
-	template<typename T>
-	inline Vec3<T>& Vec3<T>::operator*=(T k)
-	{
-		x *= k;
-		y *= k;
-		z *= k;
-		return *this;
-	}
-
-	template<typename T>
-	inline T Vec3<T>::Dot(const Vec3& v) const
-	{
-		return x * v.x + y * v.y + z * v.z;
-	}
-
-	template<typename T>
-	inline Vec3<T> Vec3<T>::Cross(const Vec3& v) const
-	{
-		return Vec3<T>(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
-	}
-
-	template<typename T>
-	inline T Vec3<T>::LengthSqr() const
-	{
-		return x * x + y * y + z * z;
-	}
-
-	template<typename T>
-	inline T Vec3<T>::Length() const
-	{
-		return sqrt(LengthSqr());
-	}
-
-    template<typename T>
-    inline Vec3<T> Vec3<T>::Normal() const
-    {
-        Vec3<T> result = *this * (1 / Length());
+        bool result = true;
+        for (int i = 0; i < Size; ++i) { result &= Helper::IsEqual<T>(v1[i], v2[i]); }
         return result;
     }
 
-    template<typename T>
-    inline void Vec3<T>::Normalize()
+    template<size_t Size>
+    inline bool operator!=(const Vector<float, Size>& v1, const Vector<float, Size>& v2)
     {
-        *this *= (1 / Length());
+        return !(v1 == v2);
     }
 
-	template<typename T>
-	inline const T& Vec3<T>::operator[](unsigned int i) const
+    template<typename T, size_t Size>
+    inline Vector<T, Size> operator-(const Vector<T, Size>& v)
+    {
+        Vector<T, Size> result;
+        for (int i = 0; i < Size; ++i) { result[i] = -v[i]; }
+        return result;
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size> operator+(const Vector<T, Size>& v1, const Vector<T, Size>& v2)
+    {
+        Vector<T, Size> result;
+        for (int i = 0; i < Size; ++i) { result[i] = v1[i] + v2[i]; }
+        return result;
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size> operator-(const Vector<T, Size>& v1, const Vector<T, Size>& v2)
+    {
+        return (v1 + (-v2));
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size> operator*(const Vector<T, Size>& v, T k)
+    {
+        Vector<T, Size> result;
+        for (int i = 0; i < Size; ++i) { result[i] = v[i] * k; }
+        return result;
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size> operator/(const Vector<T, Size>& v, T k)
+    {
+        return (v * (1 / k));
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size>& operator+=(Vector<T, Size>& v1, const Vector<T, Size>& v2)
+    {
+        v1 = v1 + v2;
+        return v1;
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size>& operator-=(Vector<T, Size>& v1, const Vector<T, Size>& v2)
+    {
+        v1 = v1 - v2;
+        return v1;
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size>& operator*=(Vector<T, Size>& v, T k)
+    {
+        v = v * k;
+        return v;
+    }
+
+    template<typename T, size_t Size>
+    inline Vector<T, Size>& operator/=(Vector<T, Size>& v, T k)
+    {
+        v = v / k;
+        return v;
+    }
+
+    template<typename T, size_t Size>
+    std::ostream& operator<<(std::ostream& os, const Vector<T, Size> v)
+    {
+        os << "< ";
+        for (int i = 0; i < Size; ++i)
+        {
+            os << v[i] << " ";
+        }
+        os << ">";
+        return os;
+    }
+
+    template<size_t Size>
+	inline std::ostream& operator<<(std::ostream& os, const Vector<float, Size> v)
 	{
-		return (&x)[i];
+		std::ios_base::fmtflags oldFlags = os.flags();
+		os.precision(5);
+		os.setf(std::ios_base::fixed);
+        os << "< ";
+        for (int i = 0; i < Size; ++i)
+        {
+            os << std::setw(12) << v[i] << " ";
+        }
+        os << ">";
+		os.flags(oldFlags);
+		return os;
 	}
 
-	template<typename T>
-	inline T& Vec3<T>::operator[](unsigned int i)
-	{
-		return (&x)[i];
-	}
 }
 
-using Vec2f = Math::Vec2<float>;
-using Vec2i = Math::Vec2<int>;
+using Vec2f = Math::Vector<float, 2>;
+using Vec2i = Math::Vector<int, 2>;
 
-using Vec3f = Math::Vec3<float>;
-using Vec3i = Math::Vec3<int>;
+using Vec3f = Math::Vector<float, 3>;
+using Vec3i = Math::Vector<int, 3>;
+

@@ -4,84 +4,72 @@
 
 #include <cassert>
 
-// Note: I didn't implemente equality operator because i didn't want to deal with template
-// specialization. Not yet anyway.
-// Helper function to test 2 Vec2f. Return true if they are equal, else false.
-static bool CompareVec2f(const Vec2f& v1, const Vec2f& v2)
-{
-	bool result = true;
-	result &= Helper::CompareFloat(v1.x, v2.x);
-	result &= Helper::CompareFloat(v1.y, v2.y);
-
-	return result;
-}
-
-// Helper function to test 2 Vec3f. Return true if they are equal, else false.
-static bool CompareVec3f(const Vec3f& v1, const Vec3f& v2)
-{
-	bool result = true;
-	result &= Helper::CompareFloat(v1.x, v2.x);
-	result &= Helper::CompareFloat(v1.y, v2.y);
-	result &= Helper::CompareFloat(v1.z, v2.z);
-
-	return result;
-}
+using namespace Helper;
+using namespace Math;
 
 void TestVec2f()
 {
 	Vec2f v1;
 	Vec2f v2{ 1.0f };
-	assert(CompareVec2f(v1, Vec2f{ 0.0f }));
-	assert(CompareVec2f(v2, Vec2f{ 1.0f }));
+	assert(v1 == Vec2f{ 0.0f });
+	assert(v2 == Vec2f{ 1.0f });
 
 	// Access operator
 	Vec2f v3{ -6.9f, 3.1f };
-	assert(Helper::CompareFloat(v3.x, v3[0]));
-	assert(Helper::CompareFloat(v3.y, v3[1]));
+	assert(IsEqual<float>(v3.x, v3[0]));
+	assert(IsEqual<float>(v3.y, v3[1]));
 
 	// Vector adding and scaling
 	v3 += v2;
-	assert(CompareVec2f(v3, Vec2f{ -5.9f, 4.1f }));
-	v2 *= 2.0f;
-	assert(CompareVec2f(v2, Vec2f{ 2.0f, 2.0f }));
+	assert((v3 == Vec2f{-5.9f, 4.1f}));
+	v2 /= 2.0f;
+	assert(v2 == Vec2f{0.5f});
+	v2 *= 4.0f;
+	assert(v2 == Vec2f{2.0f});
 	v3 -= v2;
-	assert(CompareVec2f(v3, Vec2f{ -7.9f, 2.1f }));
+	assert((v3 == Vec2f{-7.9f, 2.1f}));
 
-	// Dot, Length
-	assert(Helper::CompareFloat(v3.Dot(v2), -11.6f));
-	assert(Helper::CompareFloat(v3.Length(), 8.174350127f));
+	// Dot, Length, Normal
+	assert(IsEqual<float>(Dot(v3, v2), -11.6f));
+	assert(IsEqual<float>(Length(v3), 8.174350127f));
+    assert((Normal(v3) == Vec2f{-0.96643f, 0.25690f}));
+    
 }
 
 void TestVec3f()
 {
 	Vec3f v1;
 	Vec3f v2{ 1.0f };
-	assert(CompareVec3f(v1, Vec3f{ 0.0f }));
-	assert(CompareVec3f(v2, Vec3f{ 1.0f, 1.0f, 1.0f }));
+	assert(v1 == Vec3f{ 0.0f });
+	assert((v2 == Vec3f{ 1.0f, 1.0f, 1.0f }));
 
 	// Access operator
 	Vec3f v3{ -6.9f, 3.1f, 42.71828f };
-	assert(Helper::CompareFloat(v3.x, v3[0]));
-	assert(Helper::CompareFloat(v3.y, v3[1]));
-	assert(Helper::CompareFloat(v3.z, v3[2]));
+	assert(IsEqual<float>(v3.x, v3[0]));
+	assert(IsEqual<float>(v3.y, v3[1]));
+	assert(IsEqual<float>(v3.z, v3[2]));
 
 	// Vector adding and scaling
 	v3 += v2;
-	assert(CompareVec3f(v3, Vec3f{ -5.9f, 4.1f, 43.71828f }));
-	v2 *= 2.0f;
-	assert(CompareVec3f(v2, Vec3f{ 2.0f }));
+	assert((v3 == Vec3f{ -5.9f, 4.1f, 43.71828f }));
+    v2 /= 2.0f;
+    assert(v2 == Vec3f{0.5f});
+	v2 *= 4.0f;
+	assert(v2 == Vec3f{ 2.0f });
 	v3 -= v2;
-	assert(CompareVec3f(v3, Vec3f{ -7.9f, 2.1f, 41.71828f }));
+	assert((v3 == Vec3f{ -7.9f, 2.1f, 41.71828f }));
 
-	// Dot, Length, Cross
-	assert(Helper::CompareFloat(v3.Dot(v2), 71.83656f));
-	assert(Helper::CompareFloat(v3.Length(), 42.51158532f));
-	assert(CompareVec3f(v3.Cross(v2), Vec3f{ -79.23656f, 99.23656f, -20.0f }));
+	// Dot, Length, Cross, Normal
+	assert(IsEqual<float>(Dot(v3, v2), 71.83656f));
+	assert(IsEqual<float>(Length(v3), 42.51158532f));
+	assert((Cross(v3, v2) == Vec3f{ -79.23656f, 99.23656f, -20.0f }));
+    assert((Normal(v3) == Vec3f{-0.18583f, 0.04940f, 0.98134f}));
 }
+
 
 void TestMat44f()
 {
-	Mat44f m;
+	Mat44f m{g_identityTag};
 	Mat44f m2{ 1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
@@ -101,7 +89,7 @@ void TestMat44f()
 		2.0f, 6.0f, 10.0f, 14.0f,
 		3.0f, 7.0f, 11.0f, 15.0f,
 		4.0f, 8.0f, 12.0f, 16.0f, };
-	assert(mTransposed == m.Transposed());
+	assert(mTransposed == Transpose(m));
 
 	// Matrix-Matrix multiplication
 	Mat44f mProduct{ 30.0f, 70.0f, 110.0f, 150.0f,
@@ -119,18 +107,29 @@ void TestMat44f()
 		-7.00002f, 24.00005f, 11.00002f, 0.00000f,
 		2.00000f, -7.00002f, -3.00001f, -0.00000f,
 		0.00000f, 0.00000f, 0.00000f, 1.00000f, };
-	assert(mInverse == m.Invert());
+	assert(mInverse == Inverse(m));
 	m = Mat44f{ 9.0f, 5.0f, 2.0f, 5.0f,
 		9.0f, 5.0f, 3.0f, 7.0f,
 		6.0f, 5.0f, 4.0f, 8.0f,
 		1.0f, 5.0f, 3.0f, 7.0f, };
-
 	Mat44f mInverse2{ 0.00000f, 0.12500f, -0.00000f, -0.12500f,
 		0.80000f, -0.95000f, 0.20000f, 0.15000f,
 		1.00000f, -2.25000f, 2.00000f, -0.75000f,
 		-1.00000f, 1.62500f, -1.00000f, 0.37500f, };
-	assert(mInverse2 == m.Inverse());
+	assert(mInverse2 == Inverse(m));
+
+    // Point/Vector-Matrix multiplication
+    Vec3f v{2.0f, 4.0f, 6.0f};
+    m = Mat44f{g_identityTag};  // Perspective divide matrix
+    m(2, 2) = -1.0f;
+    m(2, 3) = -1.0f;
+    m(3, 3) = 0.0f;
+    Vec3f vResult{2.0f, 4.0f, -6.0f};
+    Vec3f pProjected{-0.33333f, -0.66666f, 1.0f};
+    assert(vResult == MultiplyVecMat(v, m));
+    assert(pProjected == MultiplyPtMat(v, m));
 }
+
 
 int main()
 {
