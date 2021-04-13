@@ -1,7 +1,8 @@
 #pragma once
-#include "Helper.h"
+#include <cmath>        // sqrt
+#include <functional>   // std::hash
 
-#include <cmath>    // For sqrt
+#include "Utils/Helper.h"
 
 namespace Math
 {
@@ -9,9 +10,9 @@ namespace Math
 	template<typename T, size_t Size, typename = std::enable_if_t<(Size > 1 && Size < 5)>>
 	struct Vector
 	{
-		// Access operator
-        const T& operator[](size_t i) const { return e[i]; }
+		// Access operator, also case for passing by const ref
         T& operator[](size_t i) { return e[i]; }
+        const T& operator[](size_t i) const { return e[i]; }
 
 		T e[Size];
 	};
@@ -19,13 +20,13 @@ namespace Math
     template<typename T>
     struct Vector<T, 4>
     {
-        Vector() : Vector{0} {}
+        Vector() = default;
         explicit Vector(T val) : x(val), y(val), z(val), w(val) {}
         Vector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
 
-        // Access operator
-        const T& operator[](size_t i) const { return e[i]; }
+		// Access operator, also case for passing by const ref
         T& operator[](size_t i) { return e[i]; }
+        const T& operator[](size_t i) const { return e[i]; }
 
         union
         {
@@ -37,13 +38,13 @@ namespace Math
     template<typename T>
     struct Vector<T, 3>
     {
-        Vector() : Vector{0} {}
+        Vector() = default;
         explicit Vector(T val) : x(val), y(val), z(val) {}
         Vector(T x, T y, T z) : x(x), y(y), z(z) {}
 
-        // Access operator
-        const T& operator[](size_t i) const { return e[i]; }
+		// Access operator, also case for passing by const ref
         T& operator[](size_t i) { return e[i]; }
+        const T& operator[](size_t i) const { return e[i]; }
 
         union
         {
@@ -55,13 +56,13 @@ namespace Math
     template<typename T>
     struct Vector<T, 2>
     {
-        Vector() : Vector{0} {}
+        Vector() = default;
         explicit Vector(T val) : x(val), y(val) {}
         Vector(T x, T y) : x(x), y(y) {}
 
-        // Access operator
-        const T& operator[](size_t i) const { return e[i]; }
+		// Access operator, also case for passing by const ref
         T& operator[](size_t i) { return e[i]; }
+        const T& operator[](size_t i) const { return e[i]; }
 
         union
         {
@@ -213,13 +214,34 @@ namespace Math
         os << "< ";
         for (int i = 0; i < Size; ++i)
         {
-            os << std::setw(12) << v[i] << " ";
+            os << v[i] << " ";
         }
         os << ">";
 		os.flags(oldFlags);
 		return os;
 	}
 
+}
+
+// Resource: https://en.cppreference.com/w/cpp/utility/hash
+namespace std
+{
+    template<typename T, size_t Size>
+    struct hash<Math::Vector<T, Size>>
+    {
+        using KeyType = Math::Vector<T, Size>;
+        std::size_t operator()(const KeyType& key) const
+        {
+            size_t h1 = std::hash<KeyType>{}(key[0]);
+            for (int i = 1; i < Size; ++i)
+            {
+                size_t h2 = std::hash<KeyType>{}(key[i]);
+                h1 ^= (h2 << 1);
+            }
+
+            return h1;
+        }
+    };
 }
 
 using Vec2f = Math::Vector<float, 2>;

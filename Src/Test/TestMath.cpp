@@ -1,4 +1,4 @@
-#include "Helper.h"
+#include "Utils/Helper.h"
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
 
@@ -9,8 +9,9 @@ using namespace Math;
 
 void TestVec2f()
 {
-	Vec2f v1;
+    Vec2f v1{};
 	Vec2f v2{ 1.0f };
+
 	assert(v1 == Vec2f{ 0.0f });
 	assert(v2 == Vec2f{ 1.0f });
 
@@ -32,7 +33,7 @@ void TestVec2f()
 	// Dot, Length, Normal
 	assert(IsEqual<float>(Dot(v3, v2), -11.6f));
 	assert(IsEqual<float>(Length(v3), 8.174350127f));
-    assert((Normal(v3) == Vec2f{-0.96643f, 0.25690f}));
+    assert(Normal(v3) == Vec2f(-0.96643f, 0.25690f));
     
 }
 

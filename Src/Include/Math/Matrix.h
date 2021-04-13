@@ -1,34 +1,35 @@
 #pragma once
-#include "Helper.h"
-#include "Math/Vector.h"
-
 #include <array>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <utility>
 
+#include "Math/Vector.h"
+#include "Utils/Helper.h"
+
 namespace Math
 {
     template<size_t R, size_t C>
-    static constexpr size_t SetElement(size_t pos)
+    static inline size_t SetElement(size_t pos)
     {
         return pos % R == pos / R;
     }
 
     template<typename T, size_t Dim, size_t... Seq>
-    constexpr std::array<T, Dim * Dim> InitIdentity(std::index_sequence<Seq...>)
+    inline std::array<T, Dim * Dim> InitIdentity(std::index_sequence<Seq...>)
     {
         return std::array<T, Dim * Dim>{{(T)SetElement<Dim, Dim>(Seq)...} };
     }
 
     struct IdentityTag {};
-    constexpr IdentityTag g_identityTag;
+    static IdentityTag g_identityTag;
 
 	// Square Matrix math class
     template<typename T, size_t Dim>
 	struct Matrix
 	{
+
         Matrix() = default;
         Matrix(IdentityTag) : e{InitIdentity<T, Dim>(std::make_index_sequence<Dim * Dim>{})} {}
         Matrix(T val) { for (int i = 0; i < Dim * Dim; ++i) { e[i] = val; } }
@@ -113,8 +114,6 @@ namespace Math
         }
 		return result;
 	}
-
-    
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Matrix operations: Transpose, Inverse 
@@ -232,6 +231,21 @@ namespace Math
         return result;
 	}
 
+    template<typename T, size_t Dim>
+    inline Vector<T, Dim> MultiplyVecMat(const Vector<T, Dim>& src, const Matrix<T, Dim>& m)
+    {
+        Vector<T, Dim> result{};
+        for (int j = 0; j < Dim; ++j)
+        {
+            for (int i = 0; i < Dim; ++i)
+            {
+                result[j] += src[i] * m(i, j);
+            }
+        }
+
+        return result;
+    }
+
     template<typename T>
 	inline Vector<T, 3> MultiplyVecMat(const Vector<T, 3>& src, const Matrix<T, 4>& m)
 	{
@@ -241,6 +255,66 @@ namespace Math
 		result.z = src.x * m[2] + src.y * m[6] + src.z * m[10] + m[14];
         return result;
 	}
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Construct 4x4 Matrices for graphic purposes: translation/rotation/scale, pespective projection.
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    using Mat44f = Matrix<float, 4>;
+
+    inline Mat44f InitTranslation(float x, float y, float z)
+    {
+        Mat44f result{g_identityTag};
+        result(3, 0) = x;
+        result(3, 1) = y;
+        result(3, 2) = z;
+        return result;
+    }
+
+    inline Mat44f InitRotation(float roll, float pitch, float yaw)
+    {
+        Mat44f rX{g_identityTag};
+        rX(1, 1) = cos(roll);
+        rX(2, 1) = -sin(roll);
+        rX(1, 2) = sin(roll);
+        rX(2, 2) = cos(roll);
+
+        Mat44f rY{g_identityTag};
+        rY(2, 2) = cos(pitch);
+        rY(0, 2) = -sin(pitch);
+        rY(2, 0) = sin(pitch);
+        rY(0, 0) = cos(pitch);
+
+        Mat44f rZ{g_identityTag};
+        rZ(0, 0) = cos(yaw);
+        rZ(1, 0) = -sin(yaw);
+        rZ(0, 1) = sin(yaw);
+        rZ(1, 1) = cos(yaw);
+
+        Mat44f result = rX * rY * rZ;
+        return result;
+    }
+
+    inline Mat44f InitScale(float fX, float fY, float fZ)
+    {
+        Mat44f result{};
+        result(0, 0) = fX;
+        result(1, 1) = fY;
+        result(2, 2) = fZ;
+        return result;
+    }
+
+    inline Mat44f InitPersp(float fovY, float aspectRatio, float n, float f)
+    {
+        Mat44f result{};
+        result(0, 0) = 1.0f / (tan(fovY / 2) * aspectRatio);
+        result(1, 1) = 1.0f / tan(fovY / 2);
+
+        result(2, 2) = -(f + n) / (f - n);
+        result(2, 3) = -1.0f;
+        result(3, 2) = -2.0f * f * n / (f - n);
+        return result;
+    }
+
 }
 
 using Mat44f = Math::Matrix<float, 4>;

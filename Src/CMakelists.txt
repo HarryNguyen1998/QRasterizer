@@ -1,30 +1,32 @@
 cmake_minimum_required(VERSION 3.7)
 project(Rasterizer VERSION 1.0.0 LANGUAGES CXX)
 
-enable_testing()
+
+find_package(SDL2 REQUIRED PATHS "${CMAKE_CURRENT_LIST_DIR}/External/SDL2")
+
+include_directories(${SDL2_INCLUDE_DIRS})
 include_directories(Include) 
+
+# I separate this because TestMath only need Helper lib.
+set(HELPER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/Utils/Helper.cpp)
+set(SOURCES ${CMAKE_CURRENT_LIST_DIR}/Renderer/OBJParser.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Renderer/IndexModel.cpp
+    ${HELPER_SOURCES}
+    ${CMAKE_CURRENT_LIST_DIR}/Utils/Timer.cpp)
+
+
+enable_testing()
 add_subdirectory(Test)
 
-# set in CMake
-option(PERSP_CORRECT "Perspective correct interpolation" OFF)
-if (PERSP_CORRECT)
-	# Set in program
-	add_definitions(-DPERSP_CORRECT)
-endif()
+add_executable(Rasterizer Main.cpp ${SOURCES})
+add_custom_command(TARGET Rasterizer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_CURRENT_LIST_DIR}/../Assets
+    $<TARGET_FILE_DIR:Rasterizer>/Assets)
 
-option(DRAW_DEPTH "Draw the depth buffer" OFF)
-if (DRAW_DEPTH)
-	add_definitions(-DDRAW_DEPTH)
-endif()
+add_custom_command(TARGET Rasterizer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different  
+        "${SDL2_LIB_DIRS}/SDL2.dll"                
+        $<TARGET_FILE_DIR:Rasterizer>)            
+target_link_libraries(Rasterizer ${SDL2_LIBRARIES})
 
-option(TEST_VISIBILITY "Check if a triangle closer to the camera will overlap the other" OFF)
-if (TEST_VISIBILITY)
-	add_definitions(-DTEST_VISIBILITY)
-endif()
-
-option(TEXTURE_COORD "Draw a textured triangle" OFF)
-if (TEXTURE_COORD)
-	add_definitions(-DTEXTURE_COORD)
-endif()
-
-add_executable(Rasterizer Main.cpp) 

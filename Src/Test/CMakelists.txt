@@ -1,5 +1,15 @@
 cmake_minimum_required(VERSION 3.7)
 
-add_executable(TestMath TestMath.cpp)
+add_executable(TestMath TestMath.cpp ${HELPER_SOURCES})
+add_executable(TestLoadSDL2 TestLoadSDL2.cpp)
+
+add_custom_command(TARGET TestLoadSDL2 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SDL2_LIB_DIRS}/SDL2.dll"            
+        $<TARGET_FILE_DIR:TestLoadSDL2>)        
+
+target_link_libraries(TestLoadSDL2 ${SDL2_LIBRARIES})
+
 add_test(Math TestMath)
+add_test(LoadSDL2 TestLoadSDL2)
 

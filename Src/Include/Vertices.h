@@ -1,8 +1,14 @@
 #pragma once
 #include "Math/Vector.h"
 
-// Each vertex coord in (x, y, z)
-const Vec3f g_verts[1732] = {
+// We have 2 things:
+// 1. Vertex array that specify each vertex coord in 3D.
+// 2. Triangle index array/index buffer: each successive group of 3 ints are the pos of 3 vertices in
+// vertex array that form a triangle. Ex: the 3 vertices g_verts[g_trisIndices[0]],
+// g_verts[g_trisIndices[1]], and g_verts[g_trisIndices[2]] form a triangle.
+
+const unsigned g_numVertices = 1732;
+const Vec3f g_verts[g_numVertices] = {
     {1.79489f, 4.83536f, 0.48091f}, {2.66195f, 4.94608f, -1.13939f}, {2.18866f, 5.86984f, 0.516773f}, 
     {2.71731f, 6.01616f, -1.11639f}, {2.0877f, 7.083f, 0.479657f}, {2.3704f, 7.22128f, -1.37961f}, 
     {1.53785f, 8.1498f, 0.335179f}, {1.70898f, 8.1852f, -1.52386f}, {0.682862f, 9.17272f, -1.61379f}, 
@@ -583,10 +589,6 @@ const Vec3f g_verts[1732] = {
     {-0.871469f, 2.60819f, -4.78228f}
 };
 
-// Triangle index array. Each successive group of 3 ints are the pos of each vertex in the vertex
-// array that form a triangle. Ex: g_trisIndices[0], g_trisIndices[1] and g_trisIndices[2] are 3
-// vertices in g_verts that form a triangle, then 3, 4, 5, and so on. So, only these vertex
-// combinations should make up triangles.
 const unsigned g_numTris = 3156;
 const unsigned g_trisIndices[g_numTris * 3] = {
     2, 0, 3, 1, 3, 0, 4, 2, 
