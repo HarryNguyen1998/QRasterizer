@@ -1,3 +1,6 @@
+// @todo Currently we only use this for testing. In the future, when we can load data from file,
+// remove this
+
 // Testing for orthographic projection
 const uint32_t g_numVertices = 2630;
 const Vec3f g_verts[g_numVertices] = {

@@ -1,8 +1,8 @@
+#include <cassert>
+
 #include "Utils/Helper.h"
 #include "Math/Vector.h"
 #include "Math/Matrix.h"
-
-#include <cassert>
 
 using namespace Helper;
 using namespace Math;
@@ -39,7 +39,7 @@ void TestVec2f()
 
 void TestVec3f()
 {
-	Vec3f v1;
+    Vec3f v1{};
 	Vec3f v2{ 1.0f };
 	assert(v1 == Vec3f{ 0.0f });
 	assert((v2 == Vec3f{ 1.0f, 1.0f, 1.0f }));
@@ -70,7 +70,7 @@ void TestVec3f()
 
 void TestMat44f()
 {
-	Mat44f m{g_identityTag};
+	Mat44f m{InitIdentity<float, 4>()};
 	Mat44f m2{ 1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
@@ -121,7 +121,7 @@ void TestMat44f()
 
     // Point/Vector-Matrix multiplication
     Vec3f v{2.0f, 4.0f, 6.0f};
-    m = Mat44f{g_identityTag};  // Perspective divide matrix
+    m = Mat44f{InitIdentity<float, 4>()};  // Perspective divide matrix
     m(2, 2) = -1.0f;
     m(2, 3) = -1.0f;
     m(3, 3) = 0.0f;

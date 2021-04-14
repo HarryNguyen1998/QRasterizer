@@ -1,4 +1,3 @@
-// 3rd party
 #include "SDL.h"
 
 #include <iostream>

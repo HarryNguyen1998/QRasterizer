@@ -10,7 +10,7 @@ namespace Helper
         std::string token;
         std::stringstream ss{s};
 
-        // NOTE: It seems that getline trims also trim all successive delim
+        // @remark It seems that getline trims also trim all successive delim
         while (std::getline(ss, token, delim))
         {
             // Trim extra space

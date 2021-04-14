@@ -1,11 +1,8 @@
 #pragma once
 #include "Math/Vector.h"
 
-// We have 2 things:
-// 1. Vertex array that specify each vertex coord in 3D.
-// 2. Triangle index array/index buffer: each successive group of 3 ints are the pos of 3 vertices in
-// vertex array that form a triangle. Ex: the 3 vertices g_verts[g_trisIndices[0]],
-// g_verts[g_trisIndices[1]], and g_verts[g_trisIndices[2]] form a triangle.
+// @todo Currently we only use this for testing. In the future, when we can load data from file,
+// remove this
 
 const unsigned g_numVertices = 1732;
 const Vec3f g_verts[g_numVertices] = {

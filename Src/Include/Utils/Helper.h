@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>   // std::getline
 
+// @brief Useful core funcs like comparing floating-point values, get the min/max between 3 values, etc.
 namespace Helper
 {
     template<typename T>
@@ -13,7 +14,7 @@ namespace Helper
         return (a == b);
 	}
 
-    // Resource: https://www.learncpp.com/cpp-tutorial/relational-operators-and-floating-point-comparisons/
+    // @see https://www.learncpp.com/cpp-tutorial/relational-operators-and-floating-point-comparisons/
     template<typename T>
     inline typename std::enable_if_t <std::is_floating_point<T>::value, bool > IsEqual(T a, T b)
 	{
@@ -29,7 +30,7 @@ namespace Helper
     template<typename T>
     T Max3(T a, T b, T c) { return std::max(a, std::max(b, c)); }
 
-    // Simple func to split a string using a delimiter
+    // @brief Simple func to split a string using a delimiter
     std::vector<std::string> Split(const std::string& s, char delim);
     
 }

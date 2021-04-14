@@ -1,4 +1,5 @@
 #include "SDL.h"
+#include "SDL_image.h"
 
 #include <cassert>
 #include <cstdlib>
@@ -17,9 +18,18 @@ void TestInitSDL2()
     SDL_DestroyWindow(window);
 }
 
+void TestLoadJpegImage()
+{
+    SDL_Surface* surface = IMG_Load("bricks.jpg");
+    assert(surface);
+
+    SDL_FreeSurface(surface);
+}
+
 int main(int argc, char** argv)
 {
     TestInitSDL2();
+    TestLoadJpegImage();
     atexit(SDL_Quit);
 
     return 0;

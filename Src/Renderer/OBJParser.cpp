@@ -9,7 +9,7 @@ namespace OBJ
 {
     IndexModel LoadFileData(const std::string& filePath)
     {
-        // TODO: handle error, e.g., exception, if file extension isn't .obj 
+        // @todo Handle error, e.g., exception, if file extension isn't .obj 
         IndexModel mesh;
         std::ifstream ifs{filePath};
         std::string line;

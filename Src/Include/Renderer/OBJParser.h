@@ -4,8 +4,9 @@
 // Forward declarations
 struct IndexModel;
 
+// @brief A globally accessible namespace containing funcs that deal with .obj file format
 namespace OBJ
 {
-    // The func assumes that the filePath is valid
+    // @todo error-check filePath
     IndexModel LoadFileData(const std::string& filePath);
 }

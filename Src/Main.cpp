@@ -1,5 +1,5 @@
-// 3rd party
 #include "SDL.h"
+#include "SDL_image.h"
 
 #include <algorithm>
 #include <cmath>
@@ -14,9 +14,12 @@
 #include "Math/Matrix.h"
 #include "Renderer/OBJParser.h"
 #include "Renderer/IndexModel.h"
+#include "Renderer/Texture.h"
 #include "Utils/Helper.h"
 #include "Utils/Timer.h"
 #include "Vertices.h"
+
+// @todo REFACTOR AND SEPARATE THIS into Rasterizer.cpp, etc.
 
 // Renderer: Based on pinhole cam model (view frustum)
 // The mode doesn't change anything if device gate and film gate resolution are the same
@@ -146,7 +149,7 @@ void TestDrawLine(SDL_Surface* surface, int w, int h)
     // We don't want to draw the line outside of w*h
     float length = (x0 > y0) ? (float)y0 : (float)x0;
 
-    Math::Matrix<float, 2> rotMat{Math::g_identityTag};
+    Math::Matrix<float, 2> rotMat{Math::InitIdentity<float, 2>()};
     float angle = 0.0f;
     float pi = (float)M_PI;
     unsigned red = SDL_MapRGB(surface->format, 255, 0, 0);
@@ -180,6 +183,7 @@ void TestDrawLine(SDL_Surface* surface, int w, int h)
 }
 
 // Renderer (our rasterizer): Gamma decoded LUT with gamma = 2.2, 8-bit.
+// @see https://scantips.com/lights/gamma3.html
 constexpr unsigned char g_gammaDecodedTable[256] = 
 {    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,
      1,   1,   1,   1,   1,   1,   1,   1,   1,   2,   2,   2,   2,   2,   2,   2,
@@ -267,8 +271,8 @@ Mat44f LookAt(Vec3f eye, Vec3f center, Vec3f up)
     Vec3f z = Normal(eye - center);
     Vec3f x = Normal(Cross(up, z));
     Vec3f y = Normal(Cross(z, x));
-    Mat44f minV{Math::g_identityTag};
-    Mat44f tr{Math::g_identityTag};
+    Mat44f minV{Math::InitIdentity<float, 4>()};
+    Mat44f tr{Math::InitIdentity<float, 4>()};
     for (int i = 0; i < 3; ++i)
     {
         minV(0, i) = x[i];
@@ -314,6 +318,7 @@ constexpr int bpp = 4;
 
 // App: setup
 SDL_Window* g_window;
+TextureManager& g_texManager = TextureManager::Instance();
 
 // v0 v1 v2 are assumed in CW order
 void DrawTriangle(unsigned char* pxBuffer, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2, unsigned color)
@@ -418,6 +423,15 @@ void DrawTriangles(const IndexModel& model, unsigned char* pxBuffer, float* zBuf
     }
 }
 
+template<typename T>
+struct Foo
+{
+    template<typename U>
+    Foo(U&& v) : v{static_cast<U&&>(v)} {}
+
+    T v;
+};
+
 // NOTE: it seems coords of .obj file are in NDC space -> Convert to Raster space. A px, bb, w, zBuffer,
 // are all floats, only final PutPixel is floored to int
 // Orthographic projection keeps x, y unchanged, and it seems zBuffer stays the same
@@ -431,8 +445,17 @@ int main(int argc, char** argv)
     std::string title{"Rasterizer"};
     g_window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, imgW, imgH, 0);
     SDL_Renderer* renderer = SDL_CreateRenderer(g_window, -1, 0);
-    SDL_SetRenderDrawColor(renderer, 50, 50, 50, 50);
     SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, imgW, imgH);
+
+    // Init jpeg file
+    int imgFlags = IMG_INIT_JPG;
+    if (!(IMG_Init(imgFlags) & imgFlags))
+    {
+        std::cout << "SDL_image can't be initialized! SDL_image error: " << IMG_GetError();
+        return -1;
+    }
+    TextureWrapper tex;
+    tex.Acquire("Assets/bricks.jpg", renderer);
 
     std::vector<unsigned char> bg(imgW * imgH * bpp, 50);
     std::vector<unsigned char> frameBuffer(imgW * imgH * bpp, 50);
@@ -488,6 +511,7 @@ int main(int argc, char** argv)
         }
 
         // Clear screen
+        SDL_SetRenderDrawColor(renderer, 50, 50, 50, 50);
         SDL_RenderClear(renderer);
         frameBuffer = bg;
         zBuffer = bgZ;
@@ -522,9 +546,17 @@ int main(int argc, char** argv)
         // Peek into the future and generate the output
         Render(accumulatedTime / dt);
 #endif
+#if 0
         DrawTriangles(model, frameBuffer.data(), zBuffer.data());
         SDL_UpdateTexture(texture, nullptr, frameBuffer.data(), imgW * bpp);
+
+        // Render texture to screen and update the screen
         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+        SDL_RenderPresent(renderer);
+#endif
+        SDL_RendererFlip flip = SDL_FLIP_NONE;
+        SDL_Rect clip{tex.Width() / 6, tex.Height() / 6, tex.Width() / 2, tex.Height() / 2};
+        tex.Render(renderer, imgW / 4, imgH / 4, &clip, flip);
         SDL_RenderPresent(renderer);
 
     }
@@ -532,6 +564,7 @@ int main(int argc, char** argv)
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(g_window);
+    IMG_Quit();
     SDL_Quit();
 
     return 0;

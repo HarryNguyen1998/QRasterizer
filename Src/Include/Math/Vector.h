@@ -6,7 +6,8 @@
 
 namespace Math
 {
-	// Vector math class.
+	// @brief A vector math class.
+    // @todo In the future, improve runtime with constexpr
 	template<typename T, size_t Size, typename = std::enable_if_t<(Size > 1 && Size < 5)>>
 	struct Vector
 	{
@@ -223,7 +224,7 @@ namespace Math
 
 }
 
-// Resource: https://en.cppreference.com/w/cpp/utility/hash
+// @see https://en.cppreference.com/w/cpp/utility/hash
 namespace std
 {
     template<typename T, size_t Size>

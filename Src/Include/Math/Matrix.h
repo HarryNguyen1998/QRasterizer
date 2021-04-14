@@ -1,5 +1,5 @@
 #pragma once
-#include <array>
+#include <cassert>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -10,31 +10,25 @@
 
 namespace Math
 {
-    template<size_t R, size_t C>
-    static inline size_t SetElement(size_t pos)
-    {
-        return pos % R == pos / R;
-    }
-
-    template<typename T, size_t Dim, size_t... Seq>
-    inline std::array<T, Dim * Dim> InitIdentity(std::index_sequence<Seq...>)
-    {
-        return std::array<T, Dim * Dim>{{(T)SetElement<Dim, Dim>(Seq)...} };
-    }
-
-    struct IdentityTag {};
-    static IdentityTag g_identityTag;
-
-	// Square Matrix math class
+	// @brief A quare Matrix math class
+    // @note Matrix has an initializer_list ctor, so be careful with {} and () when initializing!
+    // @todo In the future, improve runtime with constexpr, make_integer_sequence.
     template<typename T, size_t Dim>
 	struct Matrix
 	{
 
-        Matrix() = default;
-        Matrix(IdentityTag) : e{InitIdentity<T, Dim>(std::make_index_sequence<Dim * Dim>{})} {}
+        Matrix() = default; // Base case for variadic template ctor
         Matrix(T val) { for (int i = 0; i < Dim * Dim; ++i) { e[i] = val; } }
-        template<typename T_ = T, typename... Ts>
-        Matrix(T_ a0, Ts... args) : e{std::forward<T_>(a0), std::forward<Ts>(args)...} {}
+
+        constexpr Matrix(std::initializer_list<T> li)
+        {
+            assert(li.size() == Dim * Dim && "Only accepts square Mat");
+            int i = 0;
+            for (T element : li)
+            {
+                e[i++] = element;
+            }
+        }
 
         // Accessors
         const T& operator[](size_t i) const { return e[i]; }
@@ -42,7 +36,7 @@ namespace Math
         const T& operator()(size_t i, size_t j) const { return e[i * Dim + j]; }
         T& operator()(size_t i, size_t j) { return e[i * Dim + j]; }
 
-		std::array<T, Dim * Dim> e;
+        T e[Dim * Dim];
 	};
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,12 +127,12 @@ namespace Math
         return result;
 	}
 
-    // If matrix can't be inversed (singular matrix), return a default matrix.
+    // @note If matrix can't be inversed (singular matrix), return a default matrix.
     template<typename T, size_t Dim>
 	Matrix<T, Dim> Inverse(const Matrix<T, Dim> m)
 	{
 		// Augmented matrix [src|dest]
-        Matrix<T, Dim> dest{g_identityTag};
+        Matrix<T, Dim> dest{InitIdentity<float, 4>()};
 		Matrix<T, Dim> src{m};
 
 		// Forward elimination, p is pivot
@@ -222,8 +216,8 @@ namespace Math
 		result.z = src.x * m[2] + src.y * m[6] + src.z * m[10] + m[14];
 		T w = src.x * m[3] + src.y * m[7] + src.z * m[11] + m[15];
 
-		// Any pt is implicitly homogeneoug coords, so we need to convert it back
-		// to Cartesian coords.
+		// Any pt is implicitly homogeneoug coords, so we need to convert it back to Cartesian
+		// coords.
 		result.x /= w;
 		result.y /= w;
 		result.z /= w;
@@ -261,9 +255,21 @@ namespace Math
     ///////////////////////////////////////////////////////////////////////////////////////////////
     using Mat44f = Matrix<float, 4>;
 
+    template<typename T, size_t Dim>
+    inline Matrix<T, Dim> InitIdentity()
+    {
+        Matrix<T, Dim> result(0);
+
+        for (int i = 0; i < Dim; ++i)
+        {
+            result(i, i) = 1;
+        }
+        return result;
+    }
+
     inline Mat44f InitTranslation(float x, float y, float z)
     {
-        Mat44f result{g_identityTag};
+        Mat44f result{InitIdentity<float, 4>()};
         result(3, 0) = x;
         result(3, 1) = y;
         result(3, 2) = z;
@@ -272,19 +278,19 @@ namespace Math
 
     inline Mat44f InitRotation(float roll, float pitch, float yaw)
     {
-        Mat44f rX{g_identityTag};
+        Mat44f rX{InitIdentity<float, 4>()};
         rX(1, 1) = cos(roll);
         rX(2, 1) = -sin(roll);
         rX(1, 2) = sin(roll);
         rX(2, 2) = cos(roll);
 
-        Mat44f rY{g_identityTag};
+        Mat44f rY{InitIdentity<float, 4>()};
         rY(2, 2) = cos(pitch);
         rY(0, 2) = -sin(pitch);
         rY(2, 0) = sin(pitch);
         rY(0, 0) = cos(pitch);
 
-        Mat44f rZ{g_identityTag};
+        Mat44f rZ{InitIdentity<float, 4>()};
         rZ(0, 0) = cos(yaw);
         rZ(1, 0) = -sin(yaw);
         rZ(0, 1) = sin(yaw);

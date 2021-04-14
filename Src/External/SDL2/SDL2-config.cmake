@@ -1,4 +1,4 @@
-# Resrouce: https://trenki2.github.io/blog/2017/06/02/using-sdl2-with-cmake/
+# @see https://trenki2.github.io/blog/2017/06/02/using-sdl2-with-cmake/
 set(SDL2_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/include")
 
 # 32 and 64-bit builds
@@ -10,4 +10,5 @@ else ()
   set(SDL2_LIBRARIES "${SDL2_LIB_DIRS}/SDL2.lib;${SDL2_LIB_DIRS}/SDL2main.lib")
 endif ()
 
+# Strip leading/trailing spaces 
 string(STRIP "${SDL2_LIBRARIES}" SDL2_LIBRARIES)
