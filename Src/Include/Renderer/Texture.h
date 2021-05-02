@@ -1,3 +1,4 @@
+#pragma once
 #include "SDL.h"
 
 #include <memory>
@@ -9,7 +10,11 @@
 class TextureWrapper
 {
 public:
-    void Acquire(const std::string& filePath, SDL_Renderer* renderer);
+    // @brief Create empty texture to be drawn on (should only be the bitmap that will be output on screen)
+    // @todo Recover from exceptions, e.g., fails to create texture
+    void Init(SDL_Renderer* renderer, int w, int h, int bpp);
+
+    void Init(const std::string& filePath, SDL_Renderer* renderer);
 
     // @brief Render the tex on screen. Whether the whole tex or a portion of it is rendered
     // depends on the clip param.
@@ -17,19 +22,24 @@ public:
     // texture will be rendered.
     // @param flip Should the texture be flipped horizontally/vertically or both
     // @note Should i add angle, center in the future?
-    void Render(SDL_Renderer* renderer, int x, int y,
+    void Render(SDL_Renderer* renderer, int destX, int destY,
          SDL_Rect* clip, SDL_RendererFlip flip);
-    void RenderPixel(SDL_Renderer* pRenderer, int x, int y, int width, int height, int currentRow,
-        int currentFrame, SDL_RendererFlip flip);
-    void Release();
+
+    // @brief Render a texel from texture to screen.
+    // @todo How do i flip the final img??
+    void RenderPixel(SDL_Renderer* renderer, int srcX, int srcY, int destX, int destY) const;
+
+    void Shutdown();
 
     int Width() const;
     int Height() const;
 
 private:
-    SDL_Texture *texObj;
-    int w;
-    int h;
+    SDL_Texture *m_texObj;
+    int m_w, m_h;
+
+    // @brief Number of bits per pixel
+    int m_bpp;
 };
 
 // @details A resource manager that manages shareable and reusable textures. Responsibilities:
@@ -37,7 +47,7 @@ private:
 // may cache the result, e.g., if last ref to a resource has been dropped, the manager may
 // choose to keep it in mem in case it gets loaded again in the future.
 
-// @todo Do i need a UnloadAll() func? Reload() to update resources while updating the game at runtime,
+// @todo Reload() to update resources while updating the game at runtime,
 // In the future, loading routine should base on stream. This would help in, say retrieving assets
 // through a network, some archives, or simply from file. Ex: LoadFromStream() calls LoadFromFile(),
 // which loads file from mem and passes to GetFromFile(), which creates a stream and pass to
@@ -45,16 +55,27 @@ private:
 class TextureManager
 {
 public:
-    // Singleton pattern
+    // @note Singleton pattern
     TextureManager() = default;
     TextureManager(const TextureManager&) = delete;
     TextureManager& operator=(const TextureManager&) = delete;
-    static TextureManager& Instance();
+    
+    // @brief Initialization SDL_Img
+    bool Init();
+
+    // @brief calls Shutdown() if users don't do that, also shutdown SDL_Img
+    void Shutdown();
 
     std::shared_ptr<TextureWrapper> Load(const std::string& filePath, SDL_Renderer* renderer);
     void Unload(const std::string& filePath);
 
+    // @brief We can manually calls UnloadAll() to reuse again. Else, calls Shutdown()
+    void UnloadAll();
+
 private:
     std::unordered_map<std::string, std::shared_ptr<TextureWrapper>> loadedTexs;
+
+    // @brief 
+    bool b_hasCalledUnloadAll;
 };
 

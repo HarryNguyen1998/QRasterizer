@@ -1,5 +1,4 @@
 #pragma once
-#include <chrono>
 
 // @brief High-precision timer that keeps track of time progression. The class uses SDL2 API for timing.
 // @remark To use the timer, calls Reset(). Maybe add a pausedTime in the future, if needed?
