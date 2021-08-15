@@ -7,10 +7,16 @@
 namespace Math
 {
 	// @brief A vector math class.
-    // @todo In the future, improve runtime with constexpr
-	template<typename T, size_t Size, typename = std::enable_if_t<(Size > 1 && Size < 5)>>
+    // @note If default or value initialized, variadic ctor with 0 arg will be called instead, with
+    // vals 0-initialized.
+	template<typename T, size_t Size,
+        typename = std::enable_if_t<std::is_arithmetic<T>::value> >
 	struct Vector
 	{
+        explicit Vector(T val) { for (int i = 0; i < Size; ++i) e[i] = val; }
+        template<typename ...Args>
+        Vector(Args ...args) : e{args...} {}
+
 		// Access operator, also case for passing by const ref
         T& operator[](size_t i) { return e[i]; }
         const T& operator[](size_t i) const { return e[i]; }

@@ -67,4 +67,4 @@ void Display::Shutdown()
     SDL_DestroyWindow(m_window);
 }
 
-SDL_Renderer* Display::GetRenderer() const { return m_renderer; }
+SDL_Renderer *Display::GetRenderer() const { return m_renderer; }

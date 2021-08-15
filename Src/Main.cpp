@@ -3,47 +3,6 @@
 #include "QApp.h"
 
 #if 0
-// @brief Test DrawLine() by drawing line around the center of the img, offset by 18deg.
-void TestDrawLine(SDL_Surface* surface, int w, int h)
-{
-    int x0 = w / 2 - 1;
-    int y0 = h / 2 - 1;
-    // We don't want to draw the line outside of w*h
-    float length = (x0 > y0) ? (float)y0 : (float)x0;
-
-    Math::Matrix<float, 2> rotMat{Math::InitIdentity<float, 2>()};
-    float angle = 0.0f;
-    float pi = (float)M_PI;
-    unsigned red = SDL_MapRGB(surface->format, 255, 0, 0);
-    unsigned green = SDL_MapRGB(surface->format, 0, 255, 0);
-    unsigned white = SDL_MapRGB(surface->format, 255, 255, 255);
-
-    while (angle < 2 * pi)
-    {
-        rotMat(0, 0) = cos(angle);
-        rotMat(0, 1) = sin(angle);
-        rotMat(1, 0) = -sin(angle);
-        rotMat(1, 1) = cos(angle);
-        Vec2f endPf = MultiplyVecMat(Vec2f{length, 0.0f}, rotMat);
-        int x1 = (int)endPf.x + x0;
-        int y1 = (int)endPf.y + y0;
-        if (Helper::IsEqual(angle, 0.0f) || Helper::IsEqual(angle, pi))
-        {
-            DrawLine((unsigned*)surface->pixels, red, w, x0, y0, x1, y1);
-        }
-        else if (Helper::IsEqual(angle, pi / 2) || Helper::IsEqual(angle, (3 * pi / 2)))
-        {
-            DrawLine((unsigned*)surface->pixels, green, w, x0, y0, x1, y1);
-        }
-        else
-        {
-            DrawLine((unsigned*)surface->pixels, white, w, x0, y0, x1, y1);
-        }
-
-        angle += (pi / 10);
-    }
-}
-
 // @brief Test if depth calculation is correct by drawing the depth buffer on screen
 void DrawDepth(SDL_Surface* surface, const std::vector<float>& zBuffer, int x, int y, int pxStride)
 {

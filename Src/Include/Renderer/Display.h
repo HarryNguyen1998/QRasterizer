@@ -19,17 +19,17 @@ public:
 
     void ShowFrameStatistics(float dt, float avgFrameTime, int totalFrameCnt);
 
-    SDL_Renderer* GetRenderer() const;
+    SDL_Renderer *GetRenderer() const;
 
 private:
     // @brief Title of the window
     std::string m_title;
 
     // @brief Information about the window being used for display
-    SDL_Window* m_window;
+    SDL_Window *m_window;
 
     // @brief Information about rendering that is only used for the window
-    SDL_Renderer* m_renderer;
+    SDL_Renderer *m_renderer;
 
     // @brief Bitmap used for the renderer
     std::unique_ptr<TextureWrapper> m_bitmap;

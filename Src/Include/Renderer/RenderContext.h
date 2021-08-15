@@ -46,14 +46,16 @@ public:
     float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2);
 
     // @brief color the specified pixel on the pixel array
-    // @see https://www.libsdl.org/release/SDL-1.2.15/docs/html/guidevideo.html
-    void PutPixel(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
+    void PlotPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
         int x, int y);
 
-    // @brief Draw a line from (x0, y0) to (x1, y1) in pixel array
-    // @see https://github.com/ssloy/tinyrenderer/wiki/Lesson-1-Bresenham%E2%80%99s-Line-Drawing-Algorithm
-    void DrawLine(unsigned* pixels, unsigned color, int pxStride,
+    // @brief Draw a line from (x0, y0) to (x1, y1) on the pixel array using Bresenham algorithm
+    void PlotLine(unsigned char* pixels, unsigned color, int pxStride, int bpp,
         int x0, int y0, int x1, int y1);
+
+    // @brief Draw 12 lines starting from center of screen, with each new line
+    // as the previous rotated by 30deg
+    void TestPlotLine(SDL_Texture *texture, SDL_PixelFormat *mappingFormat, int scrW, int scrH);
 
     // @brief Gamma decoded LUT with gamma = 2.2, 8-bit.
     // @see https://scantips.com/lights/gamma3.html
