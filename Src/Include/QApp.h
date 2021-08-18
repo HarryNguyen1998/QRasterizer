@@ -8,6 +8,7 @@ class Display;
 class TextureManager;
 class Timer;
 
+// @brief a Sort-of controller that handles "when" to init/shutdown its members, main loop
 class QApp
 {
 public:
@@ -17,20 +18,13 @@ public:
     QApp& operator=(const QApp&) = delete;
     static QApp& Instance();
     
-    void DoKeyDown(SDL_KeyboardEvent* e);
-
-    // @brief Initialization and shutdown of the app
     bool Init();
+    void Start();
     void Shutdown();
 
-    void Start();
-    void Update();
-
 private:
-    bool isPaused;
+    bool m_isPaused;
 
     std::unique_ptr<Display> m_display;
-    std::unique_ptr<TextureManager> m_texManager;
-    std::unique_ptr<Timer> m_timer;
-
+    std::unique_ptr<Timer> m_globalTimer;
 };

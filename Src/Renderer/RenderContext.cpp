@@ -7,6 +7,101 @@
 #include "Renderer/Texture.h"
 #include "Utils/Helper.h"
 
+void RenderContext::DrawPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
+    int x, int y)
+{
+    unsigned char* p = pixels + (y * pixelStride + x) * bpp;
+    *(unsigned *)p = color;
+}
+
+void RenderContext::DrawLine(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
+    int x0, int x1, int y0, int y1)
+{
+    bool isSteep = false;
+    if (std::abs(y1 - y0) > std::abs(x1 - x0))
+    {
+        isSteep = true;
+        std::swap(x0, y0);
+        std::swap(x1, y1);
+    }
+
+    if (x0 > x1)
+    {
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+    }
+
+    int dx = x1 - x0;
+    int dy = y1 - y0;
+    int yDir = 1;
+    if (dy < 0)
+    {
+        dy = -dy;
+        yDir = -1;
+    }
+    int e2 = 2 * dy - dx;
+    int y = y0;
+    for (int x = x0; x <= x1; ++x)
+    {
+        if (isSteep) { DrawPt(pixels, color, bpp, pixelStride, y, x); }
+        else { DrawPt(pixels, color, bpp, pixelStride, x, y); }
+        e2 += 2 * dy;
+        if (e2 > 0)
+        {
+            e2 -= 2 * dx;
+            y += yDir;
+        }
+    }
+
+}
+
+void RenderContext::TestDrawLine(SDL_Texture *bitmap)
+{
+    unsigned char *pixels;
+    int pitch;
+    SDL_LockTexture(bitmap, nullptr, (void**)&pixels, &pitch);
+
+    float pi = (float)M_PI;
+    float angle = pi / 6;
+    float rotMat[4] = {cos(angle), sin(angle), -sin(angle), cos(angle)};
+
+    unsigned formatType;
+    int scrW, scrH;
+    SDL_QueryTexture(bitmap, &formatType, nullptr, &scrW, &scrH);
+    SDL_PixelFormat *format = SDL_AllocFormat(formatType);
+    unsigned red = SDL_MapRGBA(format, 255, 0, 0, 255);
+    unsigned green = SDL_MapRGBA(format, 0, 255, 0, 255);
+
+
+    int x0 = scrW / 2 - 1;
+    int y0 = scrH / 2 - 1;
+    // Define length as right before width/height (choose the smaller val so it doesn't extend outside of screen)
+    float length = (x0 > y0) ? (float)y0 : (float)x0;
+    float endP[2] = {length, 0.0f};
+
+    for (int i = 0; i < 12; ++i)
+    {
+        float newEndP[2]{endP[0] * rotMat[0] + endP[1] * rotMat[2], endP[0] * rotMat[1] + endP[1] * rotMat[3]};
+        int x1 = (int)endP[0] + x0;
+        int y1 = (int)endP[1] + y0;
+        if (x1 - x0 == 0 || y1 - y0 == 0)
+        {
+            DrawLine(pixels, red, 4, scrW, x0, x1, y0, y1);
+        }
+        else
+        {
+            DrawLine(pixels, green, 4, scrW, x0, x1, y0, y1);
+        }
+
+        endP[0] = newEndP[0];
+        endP[1] = newEndP[1];
+    }
+
+    SDL_UnlockTexture(bitmap);
+    SDL_FreeFormat(format);
+}
+
+
 void RenderContext::GetCanvasCoord(float* canvasT, float* canvasR, float* canvasL, float* canvasB,
     float focalLength, float zNear, ResolutionGateMode mode,
     float filmGateW, float filmGateH, int imgW, int imgH)
@@ -68,95 +163,6 @@ float RenderContext::ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f&
     float depthInverse = (w0 / v0.z) + (w1 / v1.z) + (w2 / v2.z);
     float depth = (1 / depthInverse);
     return depth;
-}
-
-void RenderContext::PlotPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
-    int x, int y)
-{
-    unsigned char* p = pixels + (y * pixelStride + x) * bpp;
-    *(unsigned *)p = color;
-}
-
-void RenderContext::PlotLine(unsigned char* pixels, unsigned color, int pxStride, int bpp,
-    int x0, int y0, int x1, int y1)
-{
-    bool isSteep = false;
-    if (std::abs(y1 - y0) > std::abs(x1 - x0))
-    {
-        isSteep = true;
-        std::swap(x0, y0);
-        std::swap(x1, y1);
-    }
-
-    if (x0 > x1)
-    {
-        std::swap(x0, x1);
-        std::swap(y0, y1);
-    }
-
-    int dx = x1 - x0;
-    int dy = y1 - y0;
-    int yDir = 1;
-    if (dy < 0)
-    {
-        dy = -dy;
-        yDir = -1;
-    }
-    int e2 = 2 * dy - dx;
-    int y = y0;
-    for (int x = x0; x <= x1; ++x)
-    {
-        if (isSteep) { PlotPt(pixels, color, pxStride, bpp, y, x); }
-        else { PlotPt(pixels, color, pxStride, bpp, x, y); }
-        e2 += 2 * dy;
-        if (e2 > 0)
-        {
-            e2 -= 2 * dx;
-            y += yDir;
-        }
-    }
-
-}
-
-void RenderContext::TestPlotLine(SDL_Texture *texture, SDL_PixelFormat *mappingFormat, int scrW, int scrH)
-{
-    unsigned char *pixels;
-    int pitch;
-    SDL_LockTexture(texture, nullptr, (void**)&pixels, &pitch);
-
-    float pi = (float)M_PI;
-    float angle = pi / 6;
-    float rotMat[4] = {cos(angle), sin(angle), -sin(angle), cos(angle)};
-
-    unsigned red = SDL_MapRGB(mappingFormat, 255, 0, 0);
-    unsigned green = SDL_MapRGB(mappingFormat, 0, 255, 0);
-
-    int x0 = scrW / 2 - 1;
-    int y0 = scrH / 2 - 1;
-    // Define length as right before width/height (choose the smaller val so it doesn't extend outside of screen)
-    float length = (x0 > y0) ? (float)y0 : (float)x0;
-    float endP[2] = {length, 0.0f};
-
-    for (int i = 0; i < 12; ++i)
-    {
-        float newEndP[2]{endP[0] * rotMat[0] + endP[1] * rotMat[2], endP[0] * rotMat[1] + endP[1] * rotMat[3]};
-        int x1 = (int)endP[0] + x0;
-        int y1 = (int)endP[1] + y0;
-        if (x1 - x0 == 0 || y1 - y0 == 0)
-        {
-            PlotLine(pixels, red, scrW, 4, x0, x1, y0, y1);
-        }
-        else
-        {
-            PlotLine(pixels, green, scrW, 4, x0, x1, y0, y1);
-        }
-
-        endP[0] = newEndP[0];
-        endP[1] = newEndP[1];
-    }
-
-
-    SDL_UnlockTexture(texture);
 }
 
 unsigned char RenderContext::DecodeGamma(float value)
@@ -369,8 +375,10 @@ void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& b
             if (zBuffer[y * bitmap.Width() + x] >= px.z)
             {
                 zBuffer[y * bitmap.Width() + x] = px.z;
+#if 0
                 tex.RenderPixel(renderer, (int)(uv.x * tex.Width()), (int)(uv.y * tex.Height()),
                     (int)px.x, (int)px.y);
+#endif
 #if 0
                 unsigned format = SDL_GetWindowPixelFormat(g_window);
                 SDL_PixelFormat* mappingFormat = SDL_AllocFormat(format);

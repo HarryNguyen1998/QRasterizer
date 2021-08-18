@@ -1,7 +1,8 @@
 #pragma once
 
 // @brief High-precision timer that keeps track of time progression. The class uses SDL2 API for timing.
-// @remark To use the timer, calls Reset(). Maybe add a pausedTime in the future, if needed?
+// @remark To use the timer, calls Reset().
+// @note Timer doesn't have a Shutdown() since its members are arithmetic types.
 class Timer
 {
 public:
@@ -26,9 +27,9 @@ public:
     double GetTotalTime() const;
 
 private:
-    long long prevTime;
-    long long startTime;
-    double deltaTime;
-    double secPerCnt;
-    bool isPaused;
+    long long m_prevTime;
+    long long m_startTime;
+    double m_deltaTime;
+    double m_secPerCnt;
+    bool m_isPaused;
 };

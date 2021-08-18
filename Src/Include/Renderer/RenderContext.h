@@ -6,6 +6,7 @@ struct IndexModel;
 class TextureWrapper;
 struct SDL_Window;
 struct SDL_Renderer;
+struct SDL_Texture;
 
 // @brief Pinhole camera settings
 struct CamSettings
@@ -32,6 +33,18 @@ public:
     };
     ResolutionGateMode g_resolutionGateMode = ResolutionGateMode::kOverscan;
 
+    // @brief color the specified pixel on the pixel array
+    void DrawPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
+        int x, int y);
+
+    // @brief Draw a line from (x0, y0) to (x1, y1) on the pixel array using Bresenham algorithm
+    void DrawLine(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
+        int x0, int x1, int y0, int y1);
+
+    // @brief Draw 12 lines starting from center of screen, with each new line
+    // as the previous rotated by 30deg
+    void TestDrawLine(SDL_Texture *texture);
+
     void GetCanvasCoord(float* canvasT, float* canvasR, float* canvasL, float* canvasB,
         float focalLength, float zNear, ResolutionGateMode mode,
         float filmGateW, float filmGateH, int imgW, int imgH);
@@ -44,18 +57,6 @@ public:
 
     // @note remember not to pass a vector with z-value of 0.
     float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2);
-
-    // @brief color the specified pixel on the pixel array
-    void PlotPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
-        int x, int y);
-
-    // @brief Draw a line from (x0, y0) to (x1, y1) on the pixel array using Bresenham algorithm
-    void PlotLine(unsigned char* pixels, unsigned color, int pxStride, int bpp,
-        int x0, int y0, int x1, int y1);
-
-    // @brief Draw 12 lines starting from center of screen, with each new line
-    // as the previous rotated by 30deg
-    void TestPlotLine(SDL_Texture *texture, SDL_PixelFormat *mappingFormat, int scrW, int scrH);
 
     // @brief Gamma decoded LUT with gamma = 2.2, 8-bit.
     // @see https://scantips.com/lights/gamma3.html

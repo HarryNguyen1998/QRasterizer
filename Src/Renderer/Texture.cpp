@@ -7,43 +7,42 @@
 
 #include "Renderer/Texture.h"
 
-void TextureWrapper::Init(SDL_Renderer* renderer, int w, int h, int bpp)
+void TextureWrapper::Init(SDL_Renderer *renderer, int w, int h, int bpp)
 {
-    m_texObj = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, w, h);
+    m_texObj = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
     m_w = w;
     m_h = h;
     m_bpp = bpp;
 }
 
-void TextureWrapper::Init(const std::string& filePath, SDL_Renderer* renderer)
+void TextureWrapper::Init(const std::string& filePath, SDL_Renderer *renderer)
 {
     SDL_Surface* tempSurf = IMG_Load(filePath.c_str());
     if (!tempSurf) { assert(1 == 0 && "Can't load img file!"); }
     m_texObj = SDL_CreateTextureFromSurface(renderer, tempSurf);
     m_w = tempSurf->w;
     m_h = tempSurf->h;
-    m_bpp = tempSurf->format->BitsPerPixel;
+    m_bpp = tempSurf->format->BytesPerPixel;
 
     SDL_FreeSurface(tempSurf);
     if (!m_texObj) { assert(1 == 0 && "Texture can't be created from surface!"); }
 }
 
-void TextureWrapper::Render(SDL_Renderer* renderer, int destX, int destY,
-    SDL_Rect* clip, SDL_RendererFlip flip)
+void TextureWrapper::Draw(SDL_Renderer *renderer, int startX, int startY,
+    SDL_Rect *clip, SDL_RendererFlip flip)
 {
     // destRect is where on the screen (and size) we will render to.
-    SDL_Rect destRect{destX, destY, m_w, m_h};
+    SDL_Rect destRect{startX, startY, m_w, m_h};
     if (clip)
     {
         destRect.w = clip->w;
         destRect.h = clip->h;
     }
 
-    SDL_RenderCopyEx(renderer, m_texObj,
-                     clip, &destRect, 0, 0, flip);
+    SDL_RenderCopyEx(renderer, m_texObj, clip, &destRect, 0, 0, flip);
 }
 
-void TextureWrapper::RenderPixel(SDL_Renderer* renderer, 
+void TextureWrapper::RenderPixel(SDL_Renderer *renderer, 
     int srcX, int srcY, int destX, int destY) const
 {
     SDL_Rect srcRect{srcX, srcY, 1, 1};
@@ -76,6 +75,8 @@ void TextureWrapper::Shutdown()
 int TextureWrapper::Width() const { return m_w; }
 int TextureWrapper::Height() const { return m_h; }
 
+SDL_Texture *TextureWrapper::GetTextureObj() { return m_texObj; }
+
 bool TextureManager::Init()
 {
     int imgFlags = IMG_INIT_JPG;
@@ -90,7 +91,7 @@ bool TextureManager::Init()
 
 void TextureManager::Shutdown()
 {
-    if (!b_hasCalledUnloadAll) { UnloadAll(); }
+    if (!m_hasCalledUnloadAll) { UnloadAll(); }
 
     IMG_Quit();
 }
@@ -133,6 +134,6 @@ void TextureManager::UnloadAll()
     }
     loadedTexs.clear();
 
-    b_hasCalledUnloadAll = true;
+    m_hasCalledUnloadAll = true;
 }
 
