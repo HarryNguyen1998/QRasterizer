@@ -12,9 +12,11 @@ class TextureWrapper
 public:
     // @brief Create empty texture to be drawn on (should only be the bitmap that will be output on screen)
     // @todo Recover from exceptions, e.g., fails to create texture
-    void Init(SDL_Renderer *renderer, int w, int h, int bpp);
+    void Init(SDL_Renderer *renderer, int w, int h);
 
     void Init(const std::string& filePath, SDL_Renderer *renderer);
+
+    void UpdateTexture(unsigned char *pixels);
 
     // @brief Blit the texture to the rendering target
     // @param clip is the width and height we take from texture to blit to the rendering target. If
@@ -32,13 +34,13 @@ public:
     int Width() const;
     int Height() const;
     SDL_Texture *GetTextureObj();
+    SDL_PixelFormat *GetPixelFormat();
 
 private:
     SDL_Texture *m_texObj;
     int m_w, m_h;
 
-    // @brief Number of bytes per pixel
-    int m_bpp;
+    SDL_PixelFormat *m_format;
 };
 
 // @details A resource manager that manages shareable and reusable textures. Responsibilities:

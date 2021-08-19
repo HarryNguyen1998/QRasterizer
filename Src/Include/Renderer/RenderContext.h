@@ -7,6 +7,7 @@ class TextureWrapper;
 struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
+struct SDL_PixelFormat;
 
 // @brief Pinhole camera settings
 struct CamSettings
@@ -43,7 +44,7 @@ public:
 
     // @brief Draw 12 lines starting from center of screen, with each new line
     // as the previous rotated by 30deg
-    void TestDrawLine(SDL_Texture *texture);
+    void TestDrawLine(unsigned char *pixels, int scrW, int scrH, SDL_PixelFormat *format);
 
     void GetCanvasCoord(float* canvasT, float* canvasR, float* canvasL, float* canvasB,
         float focalLength, float zNear, ResolutionGateMode mode,

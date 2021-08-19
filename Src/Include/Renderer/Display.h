@@ -7,6 +7,7 @@ struct IndexModel;
 class RenderContext;
 struct SDL_Window;
 struct SDL_Renderer;
+struct SDL_PixelFormat;
 class TextureWrapper;
 
 enum class DrawDebugOptions
@@ -21,20 +22,17 @@ enum class DrawDebugOptions
 class Display
 {
 public:
-    bool Init(int w, int h, const std::vector<float>& zBuffer);
+    bool Init(int w, int h, int bpp);
     void Draw(const std::vector<IndexModel>& models, DrawDebugOptions dbo);
     void Shutdown();
 
-    void ShowFrameStatistics(float dt, float avgFrameTime, int totalFrameCnt);
+    void ShowFrameStatistics(float dt, double duration, int frameCnt);
 
     SDL_Renderer *GetRenderer() const;
 
 private:
     // @brief Title of the window
     std::string m_title;
-
-    // @brief Number of bytes per pixel
-    int m_bpp;
 
     // @brief Information about the window being used for display
     SDL_Window *m_window;
@@ -46,6 +44,9 @@ private:
     std::unique_ptr<TextureWrapper> m_bitmap;
 
     std::unique_ptr<RenderContext> m_renderCtx;
+
+    // @brief pixel data (R, G, B, A channel) of the bitmap
+    std::vector<unsigned char> m_pixels;
 
     // @brief Z-buffer of the bitmap
     std::vector<float> m_zBuffer;

@@ -20,7 +20,7 @@ QApp& QApp::Instance()
 bool QApp::Init()
 {
     m_display = std::make_unique<Display>();
-    if (!m_display->Init(800, 600, std::vector<float>(800 * 600 * 4, FLT_MAX))) { return false; }
+    if (!m_display->Init(800, 600, 4)) { return false; }
 
     m_globalTimer = std::make_unique<Timer>();
 
@@ -34,10 +34,12 @@ void QApp::Start()
 
     // Main lopp
     bool isRunning = true;
-    float accumulatedTime = 0.0f;
     m_globalTimer->Reset();
+    m_globalTimer->BeginStopwatch();
     while (isRunning)
     {
+        static int frameCnt;
+
         // Input handling
         for (SDL_Event e; SDL_PollEvent(&e);)
         {
@@ -64,19 +66,19 @@ void QApp::Start()
         m_globalTimer->Tick();
         float dt = (float)m_globalTimer->GetDeltaTime();
 
-        // Frame statistics
-        static int totalFrameCnt = 0;
-        static double timeElapsed = 0.0;
-        if (m_globalTimer->GetTotalTime() - timeElapsed > 1.0)
-        {
-            m_display->ShowFrameStatistics(dt, (float)m_globalTimer->GetTotalTime() / totalFrameCnt, totalFrameCnt);
-            ++timeElapsed;
-        }
-
         DrawDebugOptions dbo = DrawDebugOptions::kDrawLine;
         m_display->Draw(models, dbo);
 
-        ++totalFrameCnt;
+        // Frame statistics every 2s
+        ++frameCnt;
+        static double sec = 0.0; sec =  m_globalTimer->EndStopwatch();
+        if (sec > 2.0)
+        {
+            m_display->ShowFrameStatistics(dt, sec, frameCnt);
+            frameCnt = 0;
+            m_globalTimer->BeginStopwatch();
+        }
+
     }
 
 }

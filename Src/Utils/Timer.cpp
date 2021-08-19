@@ -1,22 +1,15 @@
 #include "SDL.h"
 
-#include <iostream>
-
 #include "Utils/Timer.h"
-
-Timer::Timer() :
-    m_prevTime(0), m_startTime(0), m_deltaTime(0.0)
-{
-    m_secPerCnt = 1.0 / SDL_GetPerformanceFrequency();
-}
 
 void Timer::Reset()
 {
     long long now = SDL_GetPerformanceCounter();
-    m_isPaused = false;
     m_prevTime = now;
     m_startTime = now;
     m_deltaTime = 0.0;
+    m_secPerCnt = 1.0 / SDL_GetPerformanceFrequency();
+    m_isPaused = false;
 }
 
 void Timer::Unpause()
@@ -34,6 +27,16 @@ void Timer::Pause()
     {
         m_isPaused = true;
     }
+}
+
+void Timer::BeginStopwatch()
+{
+    m_stopwatchStartTime = GetTotalTime();
+}
+
+double Timer::EndStopwatch()
+{
+    return GetTotalTime() - m_stopwatchStartTime;
 }
 
 void Timer::Tick()

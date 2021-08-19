@@ -7,12 +7,13 @@
 
 #include "Renderer/Texture.h"
 
-void TextureWrapper::Init(SDL_Renderer *renderer, int w, int h, int bpp)
+void TextureWrapper::Init(SDL_Renderer *renderer, int w, int h)
 {
     m_texObj = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
     m_w = w;
     m_h = h;
-    m_bpp = bpp;
+    m_format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
+
 }
 
 void TextureWrapper::Init(const std::string& filePath, SDL_Renderer *renderer)
@@ -22,10 +23,16 @@ void TextureWrapper::Init(const std::string& filePath, SDL_Renderer *renderer)
     m_texObj = SDL_CreateTextureFromSurface(renderer, tempSurf);
     m_w = tempSurf->w;
     m_h = tempSurf->h;
-    m_bpp = tempSurf->format->BytesPerPixel;
+    m_format = SDL_AllocFormat(tempSurf->format->format);
 
     SDL_FreeSurface(tempSurf);
     if (!m_texObj) { assert(1 == 0 && "Texture can't be created from surface!"); }
+}
+
+void TextureWrapper::UpdateTexture(unsigned char *pixels)
+{
+    SDL_UpdateTexture(m_texObj, nullptr, reinterpret_cast<const void*>(pixels), m_w *
+        m_format->BytesPerPixel);
 }
 
 void TextureWrapper::Draw(SDL_Renderer *renderer, int startX, int startY,
@@ -69,6 +76,7 @@ void TextureWrapper::RenderPixel(SDL_Renderer *renderer,
 
 void TextureWrapper::Shutdown()
 {
+    SDL_FreeFormat(m_format);
     SDL_DestroyTexture(m_texObj);
 }
 
@@ -76,6 +84,7 @@ int TextureWrapper::Width() const { return m_w; }
 int TextureWrapper::Height() const { return m_h; }
 
 SDL_Texture *TextureWrapper::GetTextureObj() { return m_texObj; }
+SDL_PixelFormat * TextureWrapper::GetPixelFormat() { return m_format; }
 
 bool TextureManager::Init()
 {

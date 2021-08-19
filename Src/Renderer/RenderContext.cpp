@@ -55,23 +55,14 @@ void RenderContext::DrawLine(unsigned char* pixels, unsigned color, int bpp, int
 
 }
 
-void RenderContext::TestDrawLine(SDL_Texture *bitmap)
+void RenderContext::TestDrawLine(unsigned char *pixels, int scrW, int scrH, SDL_PixelFormat *format)
 {
-    unsigned char *pixels;
-    int pitch;
-    SDL_LockTexture(bitmap, nullptr, (void**)&pixels, &pitch);
-
     float pi = (float)M_PI;
     float angle = pi / 6;
     float rotMat[4] = {cos(angle), sin(angle), -sin(angle), cos(angle)};
 
-    unsigned formatType;
-    int scrW, scrH;
-    SDL_QueryTexture(bitmap, &formatType, nullptr, &scrW, &scrH);
-    SDL_PixelFormat *format = SDL_AllocFormat(formatType);
     unsigned red = SDL_MapRGBA(format, 255, 0, 0, 255);
     unsigned green = SDL_MapRGBA(format, 0, 255, 0, 255);
-
 
     int x0 = scrW / 2 - 1;
     int y0 = scrH / 2 - 1;
@@ -97,8 +88,6 @@ void RenderContext::TestDrawLine(SDL_Texture *bitmap)
         endP[1] = newEndP[1];
     }
 
-    SDL_UnlockTexture(bitmap);
-    SDL_FreeFormat(format);
 }
 
 

@@ -6,7 +6,6 @@
 class Timer
 {
 public:
-    Timer();
 
     // @brief Initialize the timer. This func should be called before using, or re-using a timer.
     void Reset();
@@ -16,6 +15,9 @@ public:
 
     // @brief If the timer is currently running, pause it. if it's already paused, do nothing.
     void Pause();
+
+    void BeginStopwatch();
+    double EndStopwatch();
 
     // @brief Called every frame to update the time. If it's paused, dt = 0.
     void Tick();
@@ -32,4 +34,5 @@ private:
     double m_deltaTime;
     double m_secPerCnt;
     bool m_isPaused;
+    double m_stopwatchStartTime;
 };
