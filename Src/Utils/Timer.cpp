@@ -2,7 +2,7 @@
 
 #include "Utils/Timer.h"
 
-void Timer::Reset()
+void Timer::Init()
 {
     long long now = SDL_GetPerformanceCounter();
     m_prevTime = now;
@@ -12,7 +12,7 @@ void Timer::Reset()
     m_isPaused = false;
 }
 
-void Timer::Unpause()
+void Timer::Resume()
 {
     if (m_isPaused)
     {
@@ -21,7 +21,7 @@ void Timer::Unpause()
     }
 }
 
-void Timer::Pause()
+void Timer::Suspend()
 {
     if (!m_isPaused)
     {
@@ -29,12 +29,12 @@ void Timer::Pause()
     }
 }
 
-void Timer::BeginStopwatch()
+void Timer::StartStopwatch()
 {
     m_stopwatchStartTime = GetTotalTime();
 }
 
-double Timer::EndStopwatch()
+double Timer::StopStopwatch()
 {
     return GetTotalTime() - m_stopwatchStartTime;
 }

@@ -2,6 +2,8 @@
 #include <memory>
 #include <vector>
 
+#include "Math/Vector.h"
+
 // Forward declarations
 struct IndexModel;
 class RenderContext;
@@ -23,12 +25,15 @@ class Display
 {
 public:
     bool Init(int w, int h, int bpp);
-    void Draw(const std::vector<IndexModel>& models, DrawDebugOptions dbo);
+    void Render(const std::vector<Vec3i>& verts);
+    void Render(const std::vector<IndexModel>& models, DrawDebugOptions dbo);
     void Shutdown();
 
     void ShowFrameStatistics(float dt, double duration, int frameCnt);
 
     SDL_Renderer *GetRenderer() const;
+    int Width() const;
+    int Height() const;
 
 private:
     // @brief Title of the window

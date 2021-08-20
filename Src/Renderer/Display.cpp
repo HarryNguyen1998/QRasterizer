@@ -41,7 +41,31 @@ bool Display::Init(int w, int h, int bpp)
     return true;
 }
 
-void Display::Draw(const std::vector<IndexModel>& models, DrawDebugOptions dbo)
+void Display::Render(const std::vector<Vec3i>& verts)
+{
+    SDL_RenderClear(m_renderer);
+
+    Vec3i v0 = verts[0];
+    Vec3i v1 = verts[1];
+    Vec3i v2 = verts[2];
+    unsigned white = SDL_MapRGBA(m_bitmap->GetPixelFormat(), 255, 255, 255, 255);
+#if 0
+    m_renderCtx->DrawLine(m_pixels.data(), white, m_bitmap->GetPixelFormat()->BytesPerPixel,
+        Width(), v0.x, v1.x, v0.y, v1.y);
+    m_renderCtx->DrawLine(m_pixels.data(), white, m_bitmap->GetPixelFormat()->BytesPerPixel,
+        Width(), v1.x, v2.x, v1.y, v2.y);
+    m_renderCtx->DrawLine(m_pixels.data(), white, m_bitmap->GetPixelFormat()->BytesPerPixel,
+        Width(), v2.x, v0.x, v2.y, v0.y);
+    m_renderCtx->DrawPt(m_pixels.data(), white, 4, Width(), 400, 200);
+#endif
+    m_renderCtx->DrawFilledTriangle(m_pixels.data(), white, Width(), Height(), v0, v1, v2);
+
+    m_bitmap->UpdateTexture(m_pixels.data());
+    m_bitmap->Draw(m_renderer, 0, 0, nullptr, SDL_FLIP_VERTICAL);
+    SDL_RenderPresent(m_renderer);
+}
+
+void Display::Render(const std::vector<IndexModel>& models, DrawDebugOptions dbo)
 {
     SDL_RenderClear(m_renderer);
 
@@ -102,4 +126,6 @@ void Display::Shutdown()
 }
 
 SDL_Renderer *Display::GetRenderer() const { return m_renderer; }
+int Display::Width() const { return m_bitmap->Width(); }
+int Display::Height() const { return m_bitmap->Height(); }
 

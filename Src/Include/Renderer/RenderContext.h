@@ -32,7 +32,7 @@ public:
         kFill,		// Fit resolution gate into film gate (scale down)
         kOverscan,	// Fit film gate into resolution gate (scale up)
     };
-    ResolutionGateMode g_resolutionGateMode = ResolutionGateMode::kOverscan;
+    ResolutionGateMode m_resolutionGateMode = ResolutionGateMode::kOverscan;
 
     // @brief color the specified pixel on the pixel array
     void DrawPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
@@ -44,7 +44,17 @@ public:
 
     // @brief Draw 12 lines starting from center of screen, with each new line
     // as the previous rotated by 30deg
-    void TestDrawLine(unsigned char *pixels, int scrW, int scrH, SDL_PixelFormat *format);
+    // @param w, h is width * height = size of the pixel buffer
+    void TestDrawLine(unsigned char *pixels, int w, int h, SDL_PixelFormat *format);
+
+    // @return scalar value, which is the z-comp of Cross(c-a, b-a)
+    float ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
+    int ComputeEdge(const Vec3i& a, const Vec3i& b, const Vec3i &c);
+
+    // @brief Draw a triangle by filling it with a single color
+    // @param w, h is width * height = size of the pixel buffer
+    void DrawFilledTriangle(unsigned char *pixels, unsigned color, int w, int h, const Vec3i& v0,
+        const Vec3i& v1, const Vec3i& v2);
 
     void GetCanvasCoord(float* canvasT, float* canvasR, float* canvasL, float* canvasB,
         float focalLength, float zNear, ResolutionGateMode mode,
@@ -52,9 +62,6 @@ public:
 
     // @brief Orient where the cam should look
     Mat44f LookAt(Vec3f eye, Vec3f center, Vec3f up);
-
-    // @return scalar value, which is the z-comp of Cross(c-a, b-a)
-    float EdgeFunction(const Vec3f& a, const Vec3f& b, const Vec3f& c);
 
     // @note remember not to pass a vector with z-value of 0.
     float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2);

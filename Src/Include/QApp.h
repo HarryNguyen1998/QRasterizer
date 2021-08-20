@@ -18,7 +18,7 @@ public:
     QApp& operator=(const QApp&) = delete;
     static QApp& Instance();
     
-    bool Init();
+    bool Init(int w, int h);
     void Start();
     void Shutdown();
 

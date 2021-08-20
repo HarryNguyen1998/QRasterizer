@@ -1,6 +1,5 @@
 #include "SDL_image.h"
 
-#include <iostream>
 #include <string>
 
 #include "QApp.h"
@@ -17,10 +16,10 @@ QApp& QApp::Instance()
     return app;
 }
 
-bool QApp::Init()
+bool QApp::Init(int w, int h)
 {
     m_display = std::make_unique<Display>();
-    if (!m_display->Init(800, 600, 4)) { return false; }
+    if (!m_display->Init(w, h, 4)) { return false; }
 
     m_globalTimer = std::make_unique<Timer>();
 
@@ -32,10 +31,20 @@ void QApp::Start()
     // Setup model
     std::vector<IndexModel> models{TestVerts::Rect(), TestVerts::RectPerspectiveCorrect()};
 
+    // Separate w into 4 parts h into 6 parts
+    int w = m_display->Width();
+    int h = m_display->Height();
+#if 0
+    std::vector<Vec3i> tri{{w / 4, h * 5 / 6, 0},
+        {w * 3 / 4, h / 3, 0},
+        {w / 2, h / 6, 0}};
+#endif
+    std::vector<Vec3i> tri{{200, 100, 0}, {400, 500, 0}, {600, 400, 0}};
+
     // Main lopp
     bool isRunning = true;
-    m_globalTimer->Reset();
-    m_globalTimer->BeginStopwatch();
+    m_globalTimer->Init();
+    m_globalTimer->StartStopwatch();
     while (isRunning)
     {
         static int frameCnt;
@@ -67,16 +76,16 @@ void QApp::Start()
         float dt = (float)m_globalTimer->GetDeltaTime();
 
         DrawDebugOptions dbo = DrawDebugOptions::kDrawLine;
-        m_display->Draw(models, dbo);
+        m_display->Render(tri);
 
         // Frame statistics every 2s
         ++frameCnt;
-        static double sec = 0.0; sec =  m_globalTimer->EndStopwatch();
+        static double sec = 0.0; sec =  m_globalTimer->StopStopwatch();
         if (sec > 2.0)
         {
             m_display->ShowFrameStatistics(dt, sec, frameCnt);
             frameCnt = 0;
-            m_globalTimer->BeginStopwatch();
+            m_globalTimer->StartStopwatch();
         }
 
     }

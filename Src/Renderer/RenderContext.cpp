@@ -140,11 +140,37 @@ void RenderContext::GetCanvasCoord(float* canvasT, float* canvasR, float* canvas
 #endif
 }
 
-// The z-comp of Cross(c-a, b-a)
-float RenderContext::EdgeFunction(const Vec3f& a, const Vec3f& b, const Vec3f& c)
+float RenderContext::ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c)
 {
     float result = (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
     return result;
+}
+
+int RenderContext::ComputeEdge(const Vec3i& a, const Vec3i& b, const Vec3i &c)
+{
+    int result = (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
+    return result;
+}
+
+void RenderContext::DrawFilledTriangle(unsigned char *pixels, unsigned color, int w, int h, const
+        Vec3i& v0, const Vec3i& v1, const Vec3i& v2)
+{
+    unsigned *myPixels = (unsigned *)pixels;
+    for (int y = 0; y < h; ++y)
+    {
+        for (int x = 0; x < w; ++x)
+        {
+            Vec3i pt{x, y, 0};
+
+            // Inside-outside test
+            int e12 = ComputeEdge(v1, v2, pt);
+            int e20 = ComputeEdge(v2, v0, pt);
+            int e01 = ComputeEdge(v0, v1, pt);
+            if ((e01 | e12 | e20) < 0) { continue; }
+
+            myPixels[x + y * w] = color;
+        }
+    }
 }
 
 float RenderContext::ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2)
@@ -317,7 +343,7 @@ void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& b
     Vec3f edge0 = v2Raster - v1Raster;
     Vec3f edge1 = v0Raster - v2Raster;
     Vec3f edge2 = v1Raster - v0Raster;
-    float areaTriTimes2 = EdgeFunction(v0Raster, v1Raster, v2Raster);
+    float areaTriTimes2 = ComputeEdge(v0Raster, v1Raster, v2Raster);
 
     Vec2i bbMin, bbMax;
     bbMin.x = std::max(0, (int)Helper::Min3(v0Raster.x, v1Raster.x, v2Raster.x));
@@ -330,9 +356,9 @@ void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& b
         for (int x = bbMin.x; x <= bbMax.x; ++x)
         {
             Vec3f px{x + 0.5f, y + 0.5f, 0.0f};
-            float e12 = EdgeFunction(v1Raster, v2Raster, px);
-            float e20 = EdgeFunction(v2Raster, v0Raster, px);
-            float e01 = EdgeFunction(v0Raster, v1Raster, px);
+            float e12 = ComputeEdge(v1Raster, v2Raster, px);
+            float e20 = ComputeEdge(v2Raster, v0Raster, px);
+            float e01 = ComputeEdge(v0Raster, v1Raster, px);
 
             // Top-left rule and edge test combined (using CW winding order)
             // Top edge: horizontal, to the right: y == 0 && x > 0

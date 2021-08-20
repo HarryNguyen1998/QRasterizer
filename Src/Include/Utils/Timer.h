@@ -8,16 +8,16 @@ class Timer
 public:
 
     // @brief Initialize the timer. This func should be called before using, or re-using a timer.
-    void Reset();
+    void Init();
 
     // @brief If the timer is paused, then unpause it. If it's already running, do nothing.
-    void Unpause();
+    void Resume();
 
     // @brief If the timer is currently running, pause it. if it's already paused, do nothing.
-    void Pause();
+    void Suspend();
 
-    void BeginStopwatch();
-    double EndStopwatch();
+    void StartStopwatch();
+    double StopStopwatch();
 
     // @brief Called every frame to update the time. If it's paused, dt = 0.
     void Tick();
