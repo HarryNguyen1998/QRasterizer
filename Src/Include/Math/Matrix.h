@@ -1,87 +1,96 @@
 #pragma once
-#include <cassert>
 #include <cmath>
+#include <initializer_list>
 #include <iomanip>
 #include <iostream>
-#include <utility>
 
 #include "Math/Vector.h"
 #include "Utils/Helper.h"
 
 namespace Math
 {
-	// @brief A quare Matrix math class
+	// @brief A square Matrix math class
     // @note Matrix has an initializer_list ctor, so be careful with {} and () when initializing!
-    // @todo In the future, improve runtime with constexpr, make_integer_sequence.
+    // Matrix is default-initialized to an identity matrix.
+    // If you use list-initialization and don't provide enough arguments, the leftover elements are
+    // 0-initialized.
     template<typename T, size_t Dim>
-	struct Matrix
-	{
-
-        Matrix() = default; // Base case for variadic template ctor
-        Matrix(T val) { for (int i = 0; i < Dim * Dim; ++i) { e[i] = val; } }
-
-        constexpr Matrix(std::initializer_list<T> li)
-        {
-            assert(li.size() == Dim * Dim && "Only accepts square Mat");
-            int i = 0;
-            for (T element : li)
-            {
-                e[i++] = element;
-            }
-        }
-
-        // Accessors
-        const T& operator[](size_t i) const { return e[i]; }
-        T& operator[](size_t i) { return e[i]; }
-        const T& operator()(size_t i, size_t j) const { return e[i * Dim + j]; }
-        T& operator()(size_t i, size_t j) { return e[i * Dim + j]; }
-
-        T e[Dim * Dim];
-	};
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Matrix overloaded operators: comparision, matrix multiplication
-    // With float specialization: print to os
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    template<typename T, size_t Dim>
-	inline bool operator==(const Matrix<T, Dim>& m1, const Matrix<T, Dim>& m2)
-	{
-		bool result = true;
-		for (int i = 0; i < Dim * Dim; ++i) { result &= Helper::IsEqual<T>(m1[i], m2[i]); }
-		return result;
-	}
-
-    template<typename T, size_t Dim>
-	inline bool operator!=(const Matrix<T, Dim>& m1, const Matrix<T, Dim>& m2)
-	{
-		return !(m1 == m2);
-	}
-
-    template<typename T, size_t Dim>
-    inline std::ostream& operator<<(std::ostream& os, const Matrix<T, Dim>& m)
+    struct Matrix
     {
-        os << "(";
-        for (int i = 0; i < Dim; ++i)
+        static constexpr size_t Count = Dim * Dim;
+        T e[Count];
+
+        constexpr Matrix()
+            : e{}
         {
-            for (int j = 0; j < Dim; ++j)
+            for (int i = 0; i < Dim; ++i)
             {
-                os << m(i, j) << " ";
+                for (int j = 0; j < Dim; ++j)
+                {
+                    if (i == j)
+                        e[i * Dim + j] = 1;
+                    else
+                        e[i * Dim + j] = 0;
+                }
             }
-            if (j == Dim - 1) { os << ")\n"; }
-            else { os << "\n"; }
         }
+
+        constexpr Matrix(std::initializer_list<T> li) : e{}
+        {
+            int i = 0;
+            for (const auto& element : li)
+                e[i++] = element;
+        }
+
+        // Accessors, also case for passing by const ref
+        constexpr const T& operator[](size_t i) const { return e[i]; }
+        constexpr T& operator[](size_t i) { return e[i]; }
+        constexpr const T& operator()(size_t i, size_t j) const { return e[i * Dim + j]; }
+        constexpr T& operator()(size_t i, size_t j) { return e[i * Dim + j]; }
+
+    };
+
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // Lists of available operations:
+    // Overloaded operators: ==, !=, <<, * (matrix multiplication, and vector-matrix multiplication
+    // for 3D vectors)
+    // Useful functions: Transpose, Inverse, translation/scale/rotation/perspective projection matrix
+
+    // @note Comparison operators can only be constexpr if T is integral. This is due to using
+    // IsEqual() helper function, which requires std::abs (not constexpr). The same applies to
+    // InitRotation(), InitPersp().
+    // Convention is right-handed, so vector-matrix multiplication is post-multiplied
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    template<typename T, size_t Dim>
+    constexpr bool operator==(const Matrix<T, Dim>& m1, const Matrix<T, Dim>& m2)
+    {
+        bool result = true;
+        for (int i = 0; i < Matrix<T, Dim>::Count; ++i)
+        {
+            result &= Helper::IsEqual(m1[i], m2[i]);
+        }
+
+        return result;
     }
 
-    template<size_t Dim>
-	inline std::ostream& operator<<(std::ostream& os, const Matrix<float, Dim>& m)
+    template<typename T, size_t Dim>
+    constexpr bool operator !=(const Matrix<T, Dim>& m1, const Matrix<T, Dim>& m2)
+    {
+        return !(m1 == m2);
+    }
+
+    template<typename T, size_t Dim>
+	inline std::ostream& operator<<(std::ostream& os, const Matrix<T, Dim>& m)
 	{
 		std::ios_base::fmtflags oldFlags = os.flags();
 		os.precision(5);
 		os.setf(std::ios_base::fixed);
 		os << "(";
+        int j = 0;
 		for (int i = 0; i < Dim; ++i)
 		{
-            for (int j = 0; j < Dim; ++j)
+            for (j = 0; j < Dim; ++j)
             {
                 os << std::setw(12) << m(i, j) << " ";
             }
@@ -93,13 +102,15 @@ namespace Math
 	}
 
     template<typename T, size_t Dim>
-	Matrix<T, Dim> operator*(const Matrix<T, Dim>& m1, const Matrix<T, Dim>& m2)
+	constexpr Matrix<T, Dim> operator*(const Matrix<T, Dim>& m1, const Matrix<T, Dim>& m2)
 	{
         Matrix<T, Dim> result{};
         for (int i = 0; i < Dim; ++i)
         {
             for (int j = 0; j < Dim; ++j)
             {
+                // @note due to identity matrix so pivots arent 0
+                result(i, j) = 0;
                 for (int k = 0; k < Dim; ++k)
                 {
                     result(i, j) += m1(i, k) * m2(k, j);
@@ -109,14 +120,10 @@ namespace Math
 		return result;
 	}
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Matrix operations: Transpose, Inverse 
-    // Specialization for 3D vector and 4x4 matrix: multiply between point/vector and a matrix
-    ///////////////////////////////////////////////////////////////////////////////////////////////
     template<typename T, size_t Dim>
-	inline Matrix<T, Dim> Transpose(const Matrix<T, Dim> m)
+	constexpr Matrix<T, Dim> Transpose(const Matrix<T, Dim>& m)
 	{
-        Matrix<T, Dim> result;
+        Matrix<T, Dim> result{};
         for (int i = 0; i < Dim; ++i)
         {
             for (int j = 0; j < Dim; ++j)
@@ -127,12 +134,12 @@ namespace Math
         return result;
 	}
 
-    // @note If matrix can't be inversed (singular matrix), return a default matrix.
+    // @note If matrix can't be inversed (singular matrix), return an identity matrix
     template<typename T, size_t Dim>
-	Matrix<T, Dim> Inverse(const Matrix<T, Dim> m)
+	constexpr Matrix<T, Dim> Inverse(const Matrix<T, Dim>& m)
 	{
 		// Augmented matrix [src|dest]
-        Matrix<T, Dim> dest{InitIdentity<float, 4>()};
+        Matrix<T, Dim> dest{};
 		Matrix<T, Dim> src{m};
 
 		// Forward elimination, p is pivot
@@ -207,6 +214,33 @@ namespace Math
 		return dest;
 	}
 
+    template<typename T, size_t Dim>
+    constexpr Vector<T, Dim> MultiplyVecMat(const Vector<T, Dim>& src, const Matrix<T, Dim>& m)
+    {
+        Vector<T, Dim> result{};
+        for (int j = 0; j < Dim; ++j)
+        {
+            for (int i = 0; i < Dim; ++i)
+            {
+                result[j] += src[i] * m(i, j);
+            }
+        }
+
+        return result;
+    }
+
+    template<typename T>
+	constexpr Vector<T, 3> MultiplyVecMat(const Vector<T, 3>& src, const Matrix<T, 4>& m)
+	{
+        Vector<T, 3> result;
+		result.x = src.x * m[0] + src.y * m[4] + src.z * m[8] + m[12];
+		result.y = src.x * m[1] + src.y * m[5] + src.z * m[9] + m[13];
+		result.z = src.x * m[2] + src.y * m[6] + src.z * m[10] + m[14];
+        return result;
+	}
+
+    // @todo Do I need this?
+#if 0
     template<typename T>
 	inline Vector<T, 3> MultiplyPtMat(const Vector<T, 3>& src, const Matrix<T, 4>& m)
 	{
@@ -224,94 +258,54 @@ namespace Math
 
         return result;
 	}
+#endif
 
-    template<typename T, size_t Dim>
-    inline Vector<T, Dim> MultiplyVecMat(const Vector<T, Dim>& src, const Matrix<T, Dim>& m)
+
+    constexpr Matrix<float, 4> InitTranslation(float x, float y, float z)
     {
-        Vector<T, Dim> result{};
-        for (int j = 0; j < Dim; ++j)
-        {
-            for (int i = 0; i < Dim; ++i)
-            {
-                result[j] += src[i] * m(i, j);
-            }
-        }
-
-        return result;
-    }
-
-    template<typename T>
-	inline Vector<T, 3> MultiplyVecMat(const Vector<T, 3>& src, const Matrix<T, 4>& m)
-	{
-        Vector<T, 3> result;
-		result.x = src.x * m[0] + src.y * m[4] + src.z * m[8] + m[12];
-		result.y = src.x * m[1] + src.y * m[5] + src.z * m[9] + m[13];
-		result.z = src.x * m[2] + src.y * m[6] + src.z * m[10] + m[14];
-        return result;
-	}
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // Construct 4x4 Matrices for graphic purposes: translation/rotation/scale, pespective projection.
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    using Mat44f = Matrix<float, 4>;
-
-    template<typename T, size_t Dim>
-    inline Matrix<T, Dim> InitIdentity()
-    {
-        Matrix<T, Dim> result(0);
-
-        for (int i = 0; i < Dim; ++i)
-        {
-            result(i, i) = 1;
-        }
-        return result;
-    }
-
-    inline Mat44f InitTranslation(float x, float y, float z)
-    {
-        Mat44f result{InitIdentity<float, 4>()};
+        Matrix<float, 4> result{};
         result(3, 0) = x;
         result(3, 1) = y;
         result(3, 2) = z;
         return result;
     }
 
-    inline Mat44f InitRotation(float roll, float pitch, float yaw)
+    inline Matrix<float, 4> InitRotation(float roll, float pitch, float yaw)
     {
-        Mat44f rX{InitIdentity<float, 4>()};
+        Matrix<float, 4> rX{};
         rX(1, 1) = cos(roll);
         rX(2, 1) = -sin(roll);
         rX(1, 2) = sin(roll);
         rX(2, 2) = cos(roll);
 
-        Mat44f rY{InitIdentity<float, 4>()};
+        Matrix<float, 4> rY{};
         rY(2, 2) = cos(pitch);
         rY(0, 2) = -sin(pitch);
         rY(2, 0) = sin(pitch);
         rY(0, 0) = cos(pitch);
 
-        Mat44f rZ{InitIdentity<float, 4>()};
+        Matrix<float, 4> rZ{};
         rZ(0, 0) = cos(yaw);
         rZ(1, 0) = -sin(yaw);
         rZ(0, 1) = sin(yaw);
         rZ(1, 1) = cos(yaw);
 
-        Mat44f result = rX * rY * rZ;
+        Matrix<float, 4> result = rX * rY * rZ;
         return result;
     }
 
-    inline Mat44f InitScale(float fX, float fY, float fZ)
+    constexpr Matrix<float, 4> InitScale(float fX, float fY, float fZ)
     {
-        Mat44f result{};
+        Matrix<float, 4> result{};
         result(0, 0) = fX;
         result(1, 1) = fY;
         result(2, 2) = fZ;
         return result;
     }
 
-    inline Mat44f InitPersp(float fovY, float aspectRatio, float n, float f)
+    inline Matrix<float, 4> InitPersp(float fovY, float aspectRatio, float n, float f)
     {
-        Mat44f result{};
+        Matrix<float, 4> result{};
         result(0, 0) = 1.0f / (tan(fovY / 2) * aspectRatio);
         result(1, 1) = 1.0f / tan(fovY / 2);
 
@@ -321,7 +315,12 @@ namespace Math
         return result;
     }
 
+
 }
 
+using Mat33i = Math::Matrix<int, 3>;
+using Mat33f = Math::Matrix<float, 3>;
+
+using Mat44i = Math::Matrix<int, 4>;
 using Mat44f = Math::Matrix<float, 4>;
 

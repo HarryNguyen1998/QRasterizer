@@ -34,13 +34,13 @@ public:
     int Width() const;
     int Height() const;
     SDL_Texture *GetTextureObj();
-    SDL_PixelFormat *GetPixelFormat();
+    const SDL_PixelFormat *TextureWrapper::GetPixelFormat() const;
 
 private:
     SDL_Texture *m_texObj;
     int m_w, m_h;
 
-    SDL_PixelFormat *m_format;
+    std::shared_ptr<SDL_PixelFormat> m_format;
 };
 
 // @details A resource manager that manages shareable and reusable textures. Responsibilities:

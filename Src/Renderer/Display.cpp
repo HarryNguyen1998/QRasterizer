@@ -35,20 +35,24 @@ bool Display::Init(int w, int h, int bpp)
     m_bitmap->Init(m_renderer, w, h);
 
     m_renderCtx = std::make_unique<RenderContext>();
+    if (!m_renderCtx->Init())
+    {
+        std::cerr << "Failed to initialize render context! Error is: " << SDL_GetError() << "\n";
+        return false;
+    }
     m_pixels.resize(w * h * bpp, 50);
     m_zBuffer.resize(w * h, FLT_MAX);
 
     return true;
 }
 
-void Display::Render(const std::vector<Vec3i>& verts)
+void Display::Draw(const std::vector<Vec3i>& verts)
 {
     SDL_RenderClear(m_renderer);
 
     Vec3i v0 = verts[0];
     Vec3i v1 = verts[1];
     Vec3i v2 = verts[2];
-    unsigned white = SDL_MapRGBA(m_bitmap->GetPixelFormat(), 255, 255, 255, 255);
 #if 0
     m_renderCtx->DrawLine(m_pixels.data(), white, m_bitmap->GetPixelFormat()->BytesPerPixel,
         Width(), v0.x, v1.x, v0.y, v1.y);
@@ -58,7 +62,17 @@ void Display::Render(const std::vector<Vec3i>& verts)
         Width(), v2.x, v0.x, v2.y, v0.y);
     m_renderCtx->DrawPt(m_pixels.data(), white, 4, Width(), 400, 200);
 #endif
+#if 0
+    unsigned white = SDL_MapRGBA(m_bitmap->GetPixelFormat(), 255, 255, 255, 255);
     m_renderCtx->DrawFilledTriangle(m_pixels.data(), white, Width(), Height(), v0, v1, v2);
+#endif
+    unsigned black = SDL_MapRGBA(m_bitmap->GetPixelFormat(), 0, 0, 0, 255);
+    unsigned halfGreen = SDL_MapRGBA(m_bitmap->GetPixelFormat(), 0, 127, 0, 255);
+    unsigned green = SDL_MapRGBA(m_bitmap->GetPixelFormat(), 0, 255, 0, 255);
+    m_renderCtx->DrawShadedTriangle(m_pixels.data(), Width(), Height(), m_bitmap->GetPixelFormat(),
+        v0, v1, v2,
+        halfGreen, green, black);
+
 
     m_bitmap->UpdateTexture(m_pixels.data());
     m_bitmap->Draw(m_renderer, 0, 0, nullptr, SDL_FLIP_VERTICAL);
@@ -68,6 +82,7 @@ void Display::Render(const std::vector<Vec3i>& verts)
 void Display::Render(const std::vector<IndexModel>& models, DrawDebugOptions dbo)
 {
     SDL_RenderClear(m_renderer);
+
 
     switch (dbo)
     {   // Begin switch
@@ -105,22 +120,10 @@ void Display::Render(const std::vector<IndexModel>& models, DrawDebugOptions dbo
     SDL_RenderPresent(m_renderer);
 }
 
-void Display::ShowFrameStatistics(float dt, double sec, int frameCnt)
-{
-    std::stringstream ss;
-    ss.setf(std::ios::fixed);
-    ss << m_title << " - " << frameCnt << " frames over "
-        << std::setprecision(1) << sec << " s: "
-        << std::setprecision(2) << 1.0f / dt << " fps, "
-        << std::setprecision(3) << (dt * 1000.0f) << " ms/frame";
-    const std::string& tmp = ss.str();
-    
-    SDL_SetWindowTitle(m_window, tmp.c_str());
-}
-
 void Display::Shutdown()
 {
     m_bitmap->Shutdown();
+    m_renderCtx->Shutdown();
     SDL_DestroyRenderer(m_renderer);
     SDL_DestroyWindow(m_window);
 }

@@ -1,13 +1,13 @@
 #include "SDL_image.h"
 
 #include <string>
+#include <sstream>
 
 #include "QApp.h"
 #include "Renderer/Display.h"
 #include "Renderer/IndexModel.h"
 #include "Renderer/RenderContext.h"
 #include "Renderer/Texture.h"
-#include "Utils/Timer.h"
 #include "TestVerts.h"
 
 QApp& QApp::Instance()
@@ -20,8 +20,6 @@ bool QApp::Init(int w, int h)
 {
     m_display = std::make_unique<Display>();
     if (!m_display->Init(w, h, 4)) { return false; }
-
-    m_globalTimer = std::make_unique<Timer>();
 
     return true;
 }
@@ -43,8 +41,15 @@ void QApp::Start()
 
     // Main lopp
     bool isRunning = true;
-    m_globalTimer->Init();
-    m_globalTimer->StartStopwatch();
+
+    // Call SDL_GetPerformanceFrequency() for secsPerCnt;
+    // Each loop, query startCounts, then end of loop, query endCounts, then cal deltaTime
+    // Check accumulatedTime is 2s, then
+    
+    const double secsPerCnt = 1.0 / SDL_GetPerformanceFrequency();
+    uint64_t startCounts = SDL_GetPerformanceCounter();
+    double timeElapsed = 0.0;
+    double accumulatedTime = 0.0;
     while (isRunning)
     {
         static int frameCnt;
@@ -72,20 +77,20 @@ void QApp::Start()
 
         if (m_isPaused) { continue; }
 
-        m_globalTimer->Tick();
-        float dt = (float)m_globalTimer->GetDeltaTime();
+        double dt = (SDL_GetPerformanceCounter() - startCounts) * secsPerCnt;
 
         DrawDebugOptions dbo = DrawDebugOptions::kDrawLine;
-        m_display->Render(tri);
+        m_display->Draw(tri);
 
         // Frame statistics every 2s
         ++frameCnt;
-        static double sec = 0.0; sec =  m_globalTimer->StopStopwatch();
-        if (sec > 2.0)
+        accumulatedTime += dt;
+        if (accumulatedTime > 2.0)
         {
-            m_display->ShowFrameStatistics(dt, sec, frameCnt);
+            timeElapsed += accumulatedTime;
+            accumulatedTime = 0.0;
             frameCnt = 0;
-            m_globalTimer->StartStopwatch();
+            ShowFrameStatistics(frameCnt, (float)dt, timeElapsed);
         }
 
     }
@@ -97,5 +102,19 @@ void QApp::Shutdown()
     m_display->Shutdown();
 
     SDL_Quit();
+}
+
+void QApp::ShowFrameStatistics(int frameCnt, float dt, double timeElapsed)
+{
+    std::string title = SDL_GetWindowTitle(m_window);
+    std::stringstream ss;
+    ss.setf(std::ios::fixed);
+    ss << title << " - " << frameCnt << " frames over "
+        << std::setprecision(1) << timeElapsed << " s: "
+        << std::setprecision(2) << 1.0f / dt << " fps, "
+        << std::setprecision(3) << (dt * 1000.0f) << " ms/frame";
+    const std::string& tmp = ss.str();
+    
+    SDL_SetWindowTitle(m_window, tmp.c_str());
 }
 

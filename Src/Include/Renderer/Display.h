@@ -25,11 +25,12 @@ class Display
 {
 public:
     bool Init(int w, int h, int bpp);
-    void Render(const std::vector<Vec3i>& verts);
+
+    // @param verts is list of vertices and expected to be in raster space
+    void Draw(const std::vector<Vec3i>& verts);
+
     void Render(const std::vector<IndexModel>& models, DrawDebugOptions dbo);
     void Shutdown();
-
-    void ShowFrameStatistics(float dt, double duration, int frameCnt);
 
     SDL_Renderer *GetRenderer() const;
     int Width() const;

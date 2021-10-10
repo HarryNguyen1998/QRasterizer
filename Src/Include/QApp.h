@@ -3,10 +3,10 @@
 #include <vector>
 
 // Forward declarations
+struct SDL_Window;
 struct SDL_KeyboardEvent;
 class Display;
 class TextureManager;
-class Timer;
 
 // @brief a Sort-of controller that handles "when" to init/shutdown its members, main loop
 class QApp
@@ -22,9 +22,11 @@ public:
     void Start();
     void Shutdown();
 
+    void ShowFrameStatistics(int frameCnt, float dt, double timeElapsed);
+
 private:
     bool m_isPaused;
 
+    SDL_Window *m_window;
     std::unique_ptr<Display> m_display;
-    std::unique_ptr<Timer> m_globalTimer;
 };

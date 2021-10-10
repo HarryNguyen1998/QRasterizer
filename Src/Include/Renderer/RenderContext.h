@@ -34,6 +34,9 @@ public:
     };
     ResolutionGateMode m_resolutionGateMode = ResolutionGateMode::kOverscan;
 
+    bool Init();
+    void Shutdown();
+
     // @brief color the specified pixel on the pixel array
     void DrawPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
         int x, int y);
@@ -45,7 +48,7 @@ public:
     // @brief Draw 12 lines starting from center of screen, with each new line
     // as the previous rotated by 30deg
     // @param w, h is width * height = size of the pixel buffer
-    void TestDrawLine(unsigned char *pixels, int w, int h, SDL_PixelFormat *format);
+    void TestDrawLine(unsigned char *pixels, int w, int h, const SDL_PixelFormat *format);
 
     // @return scalar value, which is the z-comp of Cross(c-a, b-a)
     float ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
@@ -55,6 +58,9 @@ public:
     // @param w, h is width * height = size of the pixel buffer
     void DrawFilledTriangle(unsigned char *pixels, unsigned color, int w, int h, const Vec3i& v0,
         const Vec3i& v1, const Vec3i& v2);
+
+    void RenderContext::DrawShadedTriangle(unsigned char *pixels, int w, int h, const SDL_PixelFormat *format,
+        const Vec3i& v0, const Vec3i& v1, const Vec3i& v2, unsigned c0, unsigned c1, unsigned c2);
 
     void GetCanvasCoord(float* canvasT, float* canvasR, float* canvasL, float* canvasB,
         float focalLength, float zNear, ResolutionGateMode mode,
@@ -118,5 +124,13 @@ public:
     // @brief Set the cam settings to some default value for testing purposes
     // @note imgAspectRatio can only be known in QApp, after we have created a window
     void SetCamToDefault(float imgAspectRatio);
+
+private:
+    SDL_PixelFormat *format;
+
+    // @brief Bytes per pixel
+    int bpp;
+
+    int pxStride;
 
 };

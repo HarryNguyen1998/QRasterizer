@@ -2,7 +2,6 @@
 
 #include "QApp.h"
 
-// @brief Main entry point of the program
 int main(int argc, char **argv)
 {
     QApp& app = QApp::Instance();

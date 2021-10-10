@@ -1,27 +1,35 @@
 #pragma once
 #include <algorithm>
-#include <cmath>
+#include <cmath>        // std::abs
 #include <type_traits>
-#include <vector>
-#include <string>   // std::getline
+
+    // typename std::enable_if<!std::is_arithmetic<T>::value, std::nullptr_t>::type = nullptr
+    // typename std::enable_if<!std::is_arithmetic_v<T>, std::nullptr_t>::type = nullptr
+    // std::enable_if_t<!std::is_arithmetic_v<T>, std::nullptr_t> = nullptr
+    // typename = std::enable_if_t<std::is_arithmetic_v<T>>
 
 // @brief Useful core funcs like comparing floating-point values, get the min/max between 3 values, etc.
 namespace Helper
 {
-    template<typename T>
-    inline typename std::enable_if_t<std::is_integral<T>::value, bool> IsEqual(T a, T b)
-	{
+    // @note This is for integer types
+    template<typename T,
+        std::enable_if_t< std::is_integral<T>::value >* = nullptr >
+    constexpr bool IsEqual(T a, T b)
+    {
         return (a == b);
-	}
+    }
 
     // @see https://www.learncpp.com/cpp-tutorial/relational-operators-and-floating-point-comparisons/
-    template<typename T>
-    inline typename std::enable_if_t <std::is_floating_point<T>::value, bool > IsEqual(T a, T b)
+    // @note Can't be constexpr because abs function isnt constexpr
+    template<typename T,
+        std::enable_if_t< std::is_floating_point<T>::value >* = nullptr >
+    bool IsEqual(T a, T b)
 	{
-		float epsilon = 1.0e-05f;
-		if (std::abs(a - b) <= epsilon)
+		double absEpsilon = 1e-12;
+        double relEpsilon = 1e-5;
+		if (std::fabs(a - b) <= absEpsilon)
 			return true;
-		return std::abs(a - b) <= epsilon * std::fmax(std::abs(a), std::abs(b));
+		return std::fabs(a - b) <= relEpsilon * std::max(std::fabs(a), std::fabs(b));
 	}
 
     template<typename T>
@@ -29,8 +37,4 @@ namespace Helper
 
     template<typename T>
     T Max3(T a, T b, T c) { return std::max(a, std::max(b, c)); }
-
-    // @brief Simple func to split a string using a delimiter
-    std::vector<std::string> Split(const std::string& s, char delim);
-    
 }
