@@ -85,23 +85,9 @@ int TextureWrapper::Height() const { return m_h; }
 SDL_Texture *TextureWrapper::GetTextureObj() { return m_texObj; }
 const SDL_PixelFormat *TextureWrapper::GetPixelFormat() const { return m_format.get(); }
 
-bool TextureManager::Init()
-{
-    int imgFlags = IMG_INIT_JPG;
-    if (!(IMG_Init(imgFlags) & imgFlags))
-    {
-        std::cout << "SDL_image can't be initialized! SDL_image error: " << IMG_GetError();
-        return false;
-    }
-
-    return true;
-}
-
 void TextureManager::Shutdown()
 {
     if (!m_hasCalledUnloadAll) { UnloadAll(); }
-
-    IMG_Quit();
 }
 
 // @todo Recover from exceptions, e.g., img fails to load

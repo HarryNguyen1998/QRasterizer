@@ -19,6 +19,10 @@ struct IndexModel
     std::vector<int> nIndices;
 
     IndexModel() = default;
+
+    // @note Only use this for 1 single triangle.
+    IndexModel(const std::vector<Vec3f>& verts);
+
     IndexModel(const std::vector<Vec3f>& verts, const std::vector<int>& vertIndices);
     IndexModel(const std::vector<Vec3f>& verts, const std::vector<Vec2f>& texCoords,
         const std::vector<Vec3f> normals, const std::vector<int>& vertIndices,

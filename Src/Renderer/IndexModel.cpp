@@ -1,7 +1,11 @@
 #include "Renderer/IndexModel.h"
 
+IndexModel::IndexModel(const std::vector<Vec3f>& verts)
+    : verts{verts}
+{}
+
 IndexModel::IndexModel(const std::vector<Vec3f>& verts, const std::vector<int>& vertIndices)
-    : verts{verts}, texCoords{}, vertIndices{vertIndices}, uvIndices{}, nIndices{}
+    : verts{verts}, vertIndices{vertIndices}
 {
     ComputeNormals();
 }

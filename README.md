@@ -1,11 +1,10 @@
 # QRasterizer
-A simple rasterizer for me to understand how OpenGL and DirectX work under the hood.
+A simple rasterizer for me to understand how a rendering API (OpenGL, DirectX) works under the hood.
 
 ---
 
 ## Sections:
 - [Configuration](#configuration)
-- [Licensing](#license)
 - [Development notes](#development-notes)
 - [Resources](#resources)
 - [Credit](#credit)
@@ -13,56 +12,26 @@ A simple rasterizer for me to understand how OpenGL and DirectX work under the h
 ---
 
 ## Configuration
-Q: How to run and test the project? Below is an example:
-- Run `git clone https://github.com/HarryNguyen1998/QRasterizer.git`
-- Open the project folder in Visual Studio and let it parse.
+- Run `git clone --recursive-submodules https://github.com/HarryNguyen1998/QRasterizer.git`
+- From project root folder: `mkdir Game && cmake -S Src -B Game -G "Ninja" && cmake --build Game`
+
+Q: How to build in VS2017:
+- Run `git clone --recursive-submodules https://github.com/HarryNguyen1998/QRasterizer.git`
+- Open the project folder in VS2017 and let it parse.
 - Click the drop-down arrow in Configuration > Manage Configurations to create a CMakeSettings.json file
 - CMAKE tab > Build Only QRasterizer target. Then, Select Startup Item to QRasterizer.exe, then
   click on it to see the project running.
 
 ---
 
-## License
-- The project uses GNU General Public License v3.0. Details can be found in [LICENSE.md](./LICENSE.md)
-
----
-
 ## Development notes
-How the project is currently structured:
-```
-.gitignore
-LICENSE.md
-README.md
-Assets (texture, .obj files)
-Game (CMakeCache, exe files)
-Src
-----CMakelists.txt      <--- The main CMake file
-----Main.cpp
-----External
---------SubDir1
-------------Include
-------------Lib
-------------SubDir1-config.cmake
-----Include
---------SubDir1
-------------Foo.h (Foo1.h, Foo2.h, etc)
---------SubDir2
-------------Bar.h (Bar1.h, Bar2.h, etc)
-----SubDir1
---------CMakelists.txt
---------Foo.cpp (Foo1.cpp, Foo2.cpp, etc)
-----SubDir2
---------CMakelists.txt
---------Bar.cpp (Bar1.cpp, Bar2.cpp, etc)
-----Test
---------CMakelists.txt
---------TestFoo.cpp (TestFoo1.cpp, etc)
---------TestBar.cpp (TestBar1.cpp, etc)
-```
 - All dependencies (.dll, .lib files) are stored in `External` folder and referenced by
   `find_package`. When CMake build the project, the Assets folder and necessary .dll files will be
   copied to the build folder.
-- @todo
+- Pixel format is RGBA32
+- Math is done in right-hand convention, aka vector is pre-multiplied.
+- Winding order is clockwise.
+- View space y points up, screen space y points down.
 
 ---
 

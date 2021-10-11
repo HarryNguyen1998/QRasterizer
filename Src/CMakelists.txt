@@ -11,10 +11,11 @@ include_directories(Include)
 
 set(QRasterizer_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/Renderer/OBJParser.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/Renderer/Display.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Renderer/QRenderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Renderer/IndexModel.cpp
     ${CMAKE_CURRENT_LIST_DIR}/Renderer/Texture.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/Renderer/RenderContext.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/Renderer/Rasterizer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/SDL_Deleter.cpp
     ${CMAKE_CURRENT_LIST_DIR}/QApp.cpp)
 
 

@@ -1,58 +1,49 @@
 #pragma once
 #include <memory>
+#include <cstdint>
 #include <vector>
 
 #include "Math/Vector.h"
+#include "Renderer/Rasterizer.h"
+#include "SDL_Deleter.h"
 
 // Forward declarations
 struct IndexModel;
-class RenderContext;
-struct SDL_Window;
-struct SDL_Renderer;
 struct SDL_PixelFormat;
-class TextureWrapper;
-
-enum class DrawDebugOptions
-{
-    kNone,
-    kDrawLine,
-    kWireframe,
-    kZBuffer,
-};
 
 // @brief Controls the window
-class Display
+class QRenderer
 {
 public:
-    bool Init(int w, int h, int bpp);
+    enum class Mode
+    {
+        kNone,
+        kDrawLine,
+        kWireframe,
+        kZBuffer,
+    };
+public:
+    bool Init(SDL_Window *window, int w, int h);
 
     // @param verts is list of vertices and expected to be in raster space
     void Draw(const std::vector<Vec3i>& verts);
 
-    void Render(const std::vector<IndexModel>& models, DrawDebugOptions dbo);
-    void Shutdown();
-
-    SDL_Renderer *GetRenderer() const;
-    int Width() const;
-    int Height() const;
+    // @note Only render 1 single triangle.
+    void Render(const std::vector<Vec3i>& model, const std::vector<Vec3f>& colors);
+    void Render(const std::vector<IndexModel>& models, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode);
 
 private:
-    // @brief Title of the window
-    std::string m_title;
-
-    // @brief Information about the window being used for display
-    SDL_Window *m_window;
-
     // @brief Information about rendering that is only used for the window
-    SDL_Renderer *m_renderer;
+    std::unique_ptr<SDL_Renderer, SDL_Deleter> m_renderer;
 
     // @brief Bitmap used for the renderer
-    std::unique_ptr<TextureWrapper> m_bitmap;
+    std::unique_ptr<SDL_Texture, SDL_Deleter> m_bitmap;
 
-    std::unique_ptr<RenderContext> m_renderCtx;
+    Rasterizer m_rasterizer;
+    int m_w, m_h;
 
-    // @brief pixel data (R, G, B, A channel) of the bitmap
-    std::vector<unsigned char> m_pixels;
+    // @brief pixel data of the bitmap
+    std::vector<uint32_t> m_pixels;
 
     // @brief Z-buffer of the bitmap
     std::vector<float> m_zBuffer;

@@ -5,8 +5,8 @@
 int main(int argc, char **argv)
 {
     QApp& app = QApp::Instance();
-    if (app.Init(800, 600)) { app.Start(); }
-    else { std::cout << "App couldn't be initialized properly. Shutting down...\n"; }
+    if (app.Init("Rasterizer thingy", 800, 600)) { app.Start(); }
+    else { std::cout << "App couldn't be initialized. Shutting down...\n"; }
 
     app.Shutdown();
     return 0;

@@ -2,10 +2,11 @@
 #include <memory>
 #include <vector>
 
+#include "SDL_Deleter.h"
+
 // Forward declarations
-struct SDL_Window;
 struct SDL_KeyboardEvent;
-class Display;
+class QRenderer;
 class TextureManager;
 
 // @brief a Sort-of controller that handles "when" to init/shutdown its members, main loop
@@ -18,15 +19,19 @@ public:
     QApp& operator=(const QApp&) = delete;
     static QApp& Instance();
     
-    bool Init(int w, int h);
+    bool Init(const std::string& title, int w, int h);
     void Start();
     void Shutdown();
 
-    void ShowFrameStatistics(int frameCnt, float dt, double timeElapsed);
+    void ShowFrameStatistics(int frameCnt, double dt);
 
 private:
     bool m_isPaused;
 
-    SDL_Window *m_window;
-    std::unique_ptr<Display> m_display;
+    std::string m_title;
+    int m_w, m_h;
+    std::unique_ptr<SDL_Window, SDL_Deleter> m_window;
+
+    // @note Differentiate with SDL_Renderer
+    std::unique_ptr<QRenderer> m_qrenderer;
 };

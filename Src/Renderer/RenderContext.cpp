@@ -151,18 +151,6 @@ void RenderContext::GetCanvasCoord(float* canvasT, float* canvasR, float* canvas
 #endif
 }
 
-float RenderContext::ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c)
-{
-    float result = (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
-    return result;
-}
-
-int RenderContext::ComputeEdge(const Vec3i& a, const Vec3i& b, const Vec3i &c)
-{
-    int result = (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
-    return result;
-}
-
 void RenderContext::DrawFilledTriangle(unsigned char *pixels, unsigned color, int w, int h,
     const Vec3i& v0, const Vec3i& v1, const Vec3i& v2)
 {
@@ -180,40 +168,6 @@ void RenderContext::DrawFilledTriangle(unsigned char *pixels, unsigned color, in
             if ((e01 | e12 | e20) < 0) { continue; }
 
             myPixels[x + y * w] = color;
-        }
-    }
-}
-
-void RenderContext::DrawShadedTriangle(unsigned char *pixels, int w, int h, const SDL_PixelFormat *format,
-    const Vec3i& v0, const Vec3i& v1, const Vec3i& v2, unsigned c0, unsigned c1, unsigned c2)
-{
-    unsigned *myPixels = (unsigned *)pixels;
-    unsigned char r0, r1, r2, g0, g1, g2, b0, b1, b2;
-    SDL_GetRGB(c0, format, &r0, &g0, &b0);
-    SDL_GetRGB(c1, format, &r1, &g1, &b1);
-    SDL_GetRGB(c2, format, &r2, &g2, &b2);
-    int areaOfParallelogram = ComputeEdge(v0, v1, v2);
-    for (int y = 0; y < h; ++y)
-    {
-        for (int x = 0; x < w; ++x)
-        {
-            Vec3i pt{x, y, 0};
-
-            // Inside-outside test
-            int e12 = ComputeEdge(v1, v2, pt);
-            int e20 = ComputeEdge(v2, v0, pt);
-            int e01 = ComputeEdge(v0, v1, pt);
-            if ((e01 | e12 | e20) < 0) { continue; }
-
-            float t0 = (float)e12 / areaOfParallelogram;
-            float t1 = (float)e20 / areaOfParallelogram;
-            float t2 = (float)e01 / areaOfParallelogram;
-
-            auto r = (unsigned char)std::max(0.0f, r0 * t0 + r1 * t1 + r2 * t2 + 0.5f);
-            auto g = (unsigned char)std::max(0.0f, g0 * t0 + g1 * t1 + g2 * t2 + 0.5f);
-            auto b = (unsigned char)std::max(0.0f, b0 * t0 + b1 * t1 + b2 * t2 + 0.5f);
-            
-            myPixels[x + y * w] = SDL_MapRGBA(format, r, g, b, 255);
         }
     }
 }
@@ -237,8 +191,8 @@ Mat44f RenderContext::LookAt(Vec3f eye, Vec3f center, Vec3f up)
     Vec3f z = Normal(eye - center);
     Vec3f x = Normal(Cross(up, z));
     Vec3f y = Normal(Cross(z, x));
-    Mat44f minV{Math::InitIdentity<float, 4>()};
-    Mat44f tr{Math::InitIdentity<float, 4>()};
+    Mat44f minV{};
+    Mat44f tr{};
     for (int i = 0; i < 3; ++i)
     {
         minV(0, i) = x[i];
@@ -376,9 +330,11 @@ void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& b
     Mat44f projMat = Math::InitPersp(fovY, imgAspectRatio, zNear, zFar);
 
     // x, y in range [-1, 1], z in range [0, 1]
+#if 0
     v0 = MultiplyPtMat(v0, viewMat * projMat);
     v1 = MultiplyPtMat(v1, viewMat * projMat);
     v2 = MultiplyPtMat(v2, viewMat * projMat);
+#endif
 
     Vec3f v0Raster = NDCToRaster(v0, bitmap.Width(), bitmap.Height());
     Vec3f v1Raster = NDCToRaster(v1, bitmap.Width(), bitmap.Height());

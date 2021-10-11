@@ -69,6 +69,7 @@ namespace Math
         {
             T e[3];
             struct { T x, y, z; };
+            struct { T r, g, b; };
         };
         constexpr Vector() : e{} {}
         constexpr explicit Vector(T val) : e{}

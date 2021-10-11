@@ -61,10 +61,7 @@ public:
     TextureManager(const TextureManager&) = delete;
     TextureManager& operator=(const TextureManager&) = delete;
     
-    // @brief Initialization SDL_Img
-    bool Init();
-
-    // @brief calls Shutdown() if users don't do that, also shutdown SDL_Img
+    // @brief calls Shutdown() if users don't do that
     void Shutdown();
 
     std::shared_ptr<TextureWrapper> Load(const std::string& filePath, SDL_Renderer *renderer);

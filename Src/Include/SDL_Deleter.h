@@ -1,9 +1,12 @@
+#pragma once
 // Forward declarations
 struct SDL_Window;
-
-void SDL_DeleteWindow(SDL_Window*);
+struct SDL_Renderer;
+struct SDL_Texture;
 
 struct SDL_Deleter
 {
-    void operator()(SDL_Window *window) { SDL_DeleteWindow(window); }
+    void operator()(SDL_Window *window);
+    void operator()(SDL_Renderer *renderer);
+    void operator()(SDL_Texture *texture);
 };
