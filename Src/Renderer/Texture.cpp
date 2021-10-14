@@ -7,15 +7,6 @@
 
 #include "Renderer/Texture.h"
 
-void TextureWrapper::Init(SDL_Renderer *renderer, int w, int h)
-{
-    m_texObj = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
-    m_w = w;
-    m_h = h;
-    m_format = std::shared_ptr<SDL_PixelFormat>(SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32), SDL_FreeFormat);
-
-}
-
 void TextureWrapper::Init(const std::string& filePath, SDL_Renderer *renderer)
 {
     SDL_Surface* tempSurf = IMG_Load(filePath.c_str());

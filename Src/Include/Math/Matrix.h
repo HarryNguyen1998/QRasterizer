@@ -270,27 +270,40 @@ namespace Math
         return result;
     }
 
+    // @brief roll, pitch, yaw are in rad
     inline Matrix<float, 4> InitRotation(float roll, float pitch, float yaw)
     {
-        Matrix<float, 4> rX{};
-        rX(1, 1) = cos(roll);
-        rX(2, 1) = -sin(roll);
-        rX(1, 2) = sin(roll);
-        rX(2, 2) = cos(roll);
+        Matrix<float, 4> result{};
+        if (!Helper::IsEqual(pitch, 0.0f))
+        {
+            Matrix<float, 4> rX{};
+            rX(1, 1) = cos(pitch);
+            rX(2, 1) = -sin(pitch);
+            rX(1, 2) = sin(pitch);
+            rX(2, 2) = cos(pitch);
+            result = result * rX;
+        }
 
-        Matrix<float, 4> rY{};
-        rY(2, 2) = cos(pitch);
-        rY(0, 2) = -sin(pitch);
-        rY(2, 0) = sin(pitch);
-        rY(0, 0) = cos(pitch);
+        if (!Helper::IsEqual(yaw, 0.0f))
+        {
+            Matrix<float, 4> rY{};
+            rY(2, 2) = cos(yaw);
+            rY(0, 2) = -sin(yaw);
+            rY(2, 0) = sin(yaw);
+            rY(0, 0) = cos(yaw);
+            result = result * rY;
+        }
 
-        Matrix<float, 4> rZ{};
-        rZ(0, 0) = cos(yaw);
-        rZ(1, 0) = -sin(yaw);
-        rZ(0, 1) = sin(yaw);
-        rZ(1, 1) = cos(yaw);
+        if (!Helper::IsEqual(roll, 0.0f))
+        {
+            Matrix<float, 4> rZ{};
+            rZ(0, 0) = cos(roll);
+            rZ(1, 0) = -sin(roll);
+            rZ(0, 1) = sin(roll);
+            rZ(1, 1) = cos(roll);
+            result = result * rZ;
+        }
 
-        Matrix<float, 4> result = rX * rY * rZ;
         return result;
     }
 
@@ -303,15 +316,28 @@ namespace Math
         return result;
     }
 
+    // @brief TRT^-1, where T transforms center back to origin.
+    // @param center The point where the obj is centered around, not the origin.
+    inline Vec3f AffineRotation(const Vec3f& input, const Vec3f& center, const Matrix<float, 4>& rotMat)
+    {
+        Vec3f result = MultiplyVecMat(input, rotMat);
+        result[0] += -center.x * rotMat(0, 0) - center.y * rotMat(1, 0) - center.z * rotMat(2, 0) + center.x;
+        result[1] += -center.x * rotMat(0, 1) - center.y * rotMat(1, 1) - center.z * rotMat(2, 1) + center.y;
+        result[2] += -center.x * rotMat(0, 2) - center.y * rotMat(1, 2) - center.z * rotMat(2, 2) + center.z;
+
+        return result;
+    }
+
+    // @note z is in range [0,1]
     inline Matrix<float, 4> InitPersp(float fovY, float aspectRatio, float n, float f)
     {
         Matrix<float, 4> result{};
         result(0, 0) = 1.0f / (tan(fovY / 2) * aspectRatio);
         result(1, 1) = 1.0f / tan(fovY / 2);
 
-        result(2, 2) = -(f + n) / (f - n);
+        result(2, 2) = -f / (f - n);
         result(2, 3) = -1.0f;
-        result(3, 2) = -2.0f * f * n / (f - n);
+        result(3, 2) = -f * n / (f - n);
         return result;
     }
 

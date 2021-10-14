@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>  // To use stringstream
+#include <utility>
 
 #include "Renderer/QRenderer.h"
 #include "Renderer/IndexModel.h"
@@ -27,24 +28,40 @@ bool QRenderer::Init(SDL_Window *window, int w, int h)
         return false;
     }
 
-    m_pixels.reserve(w * h * 4);
+    m_pixels = std::vector<uint32_t>(m_w * m_h, 0);
     m_zBuffer.reserve(w * h);
 
     return true;
 }
 
-void QRenderer::Render(const std::vector<Vec3i>& model, const std::vector<Vec3f>& colors)
+void QRenderer::Render(const Model& model, const std::vector<Vec3f>& colors, Mode drawMode)
 {
-    std::fill(m_pixels.begin(), m_pixels.end(), 50);
+    std::fill(m_pixels.begin(), m_pixels.end(), 0);
     SDL_RenderClear(m_renderer.get());
-    m_rasterizer.Rasterize(m_pixels.data(), m_w, m_h, model, colors);
+    m_rasterizer.Rasterize(m_pixels.data(), m_w, m_h, model, m_projMat, colors);
     SDL_UpdateTexture(m_bitmap.get(), nullptr, reinterpret_cast<const void*>(m_pixels.data()), m_w * 4);
-    SDL_RenderCopy(m_renderer.get(), m_bitmap.get(), nullptr, nullptr);
+    SDL_RenderCopyEx(m_renderer.get(), m_bitmap.get(), nullptr, nullptr, 0, nullptr, SDL_FLIP_VERTICAL);
     SDL_RenderPresent(m_renderer.get());
 }
 
-void QRenderer::Render(const std::vector<IndexModel>& models, const std::vector<Vec3f>& colors, Mode drawMode)
-{
-}
+void QRenderer::SetProjectionMatrix(Mat44f m) { m_projMat = std::move(m); }
 
+Mat44f QRenderer::LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up)
+{
+    Vec3f camForward = Math::Normal(eye - at);
+    Vec3f camRight = Math::Cross(Math::Normal(up), camForward);
+    Vec3f camUp = Cross(camForward, camRight);
+
+    Mat44f viewMat{};
+    for (int i = 0; i < 3; ++i)
+    {
+        // Inverse of orthonormal is transpose, of translation is same values but negated.
+        viewMat(i, 0) = camRight[i];
+        viewMat(i, 1) = camUp[i];
+        viewMat(i, 2) = camForward[i];
+        viewMat(3, i) = -eye[i];
+    }
+
+    return viewMat;
+}
 

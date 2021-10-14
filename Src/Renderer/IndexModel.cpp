@@ -1,32 +1,81 @@
 #include "Renderer/IndexModel.h"
 
-IndexModel::IndexModel(const std::vector<Vec3f>& verts)
-    : verts{verts}
-{}
-
-IndexModel::IndexModel(const std::vector<Vec3f>& verts, const std::vector<int>& vertIndices)
-    : verts{verts}, vertIndices{vertIndices}
+Model::Model(const std::vector<Vec3f>& inVerts, const std::vector<int>& inVertIndices)
+    : verts{inVerts}, vertIndices{inVertIndices}
 {
-    ComputeNormals();
-}
-
-IndexModel::IndexModel(const std::vector<Vec3f>& verts, const std::vector<Vec2f>& texCoords,
-    const std::vector<Vec3f> normals, const std::vector<int>& vertIndices,
-    const std::vector<int>& uvIndices, const std::vector<int> nIndices)
-    : verts{verts}, texCoords{texCoords}, normals{normals},
-    vertIndices{vertIndices}, uvIndices{uvIndices}, nIndices{nIndices}
-{
-    if (normals.empty()) { ComputeNormals(); }
-}
-
-void IndexModel::ComputeNormals()
-{
-    for (int i = 0; i < nIndices.size(); i += 3)
+    // Change to CW order
+    for (int i = 0; i < vertIndices.size(); i += 3)
     {
-        // NOTE: .obj file has CCW winding order!
-        Vec3f edge01 = verts[nIndices[i + 1]] - verts[nIndices[i]];
-        Vec3f edge02 = verts[nIndices[i + 2]] - verts[nIndices[i]];
+        int tmp = vertIndices[i + 1]; 
+        vertIndices[i + 1] = vertIndices[i + 2];
+        vertIndices[i + 2] = tmp;
 
-        normals.push_back(Normal(Cross(edge01, edge02)));
+        if (!uvIndices.empty())
+        {
+            tmp = uvIndices[i + 1];
+            uvIndices[i + 1] = uvIndices[i + 2];
+            uvIndices[i + 2] = tmp;
+        }
+
+        if (!nIndices.empty())
+        {
+            tmp = nIndices[i + 1];
+            nIndices[i + 1] = nIndices[i + 2];
+            nIndices[i + 2] = tmp;
+        }
+        // No normal data, so calc surf normal
+        else
+        {
+            normals.push_back(Math::Cross(
+                verts[vertIndices[i + 2]] - verts[vertIndices[i]],
+                verts[vertIndices[i + 1]] - verts[vertIndices[i]]));
+        }
     }
 }
+
+Model::Model(const std::vector<Vec3f>& inVerts, const std::vector<Vec2f>& inTexCoords,
+    const std::vector<Vec3f>& inNormals, const std::vector<int>& inVertIndices,
+    const std::vector<int>& inUVIndices, const std::vector<int>& inNIndices)
+    : verts{inVerts}, texCoords{inTexCoords}, normals{inNormals},
+    vertIndices{inVertIndices}, uvIndices{inUVIndices}, nIndices{inNIndices}
+{
+    // Change to CW order
+    for (int i = 0; i < vertIndices.size(); i += 3)
+    {
+        int tmp = vertIndices[i + 1]; 
+        vertIndices[i + 1] = vertIndices[i + 2];
+        vertIndices[i + 2] = tmp;
+
+        if (!uvIndices.empty())
+        {
+            tmp = uvIndices[i + 1];
+            uvIndices[i + 1] = uvIndices[i + 2];
+            uvIndices[i + 2] = tmp;
+        }
+
+        if (!nIndices.empty())
+        {
+            tmp = nIndices[i + 1];
+            nIndices[i + 1] = nIndices[i + 2];
+            nIndices[i + 2] = tmp;
+        }
+        // No normal data, so calc surf normal
+        else
+        {
+            normals.push_back(Math::Cross(
+                verts[vertIndices[i + 2]] - verts[vertIndices[i]],
+                verts[vertIndices[i + 1]] - verts[vertIndices[i]]));
+        }
+    }
+}
+
+void Model::CalculateNormal()
+{
+    // If no normal index is specified, each normal is a surf normal. Else, it's a vert normal
+    if (nIndices.empty())
+    {
+            // @todo    
+    }
+
+}
+

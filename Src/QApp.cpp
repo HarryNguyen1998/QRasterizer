@@ -6,11 +6,11 @@
 #include <sstream>
 
 #include "QApp.h"
+#include "Renderer/OBJLoader.h"
 #include "Renderer/QRenderer.h"
 #include "Renderer/IndexModel.h"
 #include "Renderer/RenderContext.h"
 #include "Renderer/Texture.h"
-#include "TestVerts.h"
 
 QApp& QApp::Instance()
 {
@@ -52,18 +52,31 @@ bool QApp::Init(const std::string& title, int w, int h)
 
 void QApp::Start()
 {
-    // Separate w into 4 parts h into 6 parts
-    std::vector<Vec3i> tri{
-        {m_w / 4, m_h / 6, 0},
-        {m_w * 3 / 4, m_h * 2 / 3, 0},
-        {m_w / 2, m_h * 5 / 6, 0},
+    std::vector<Vec3f> colors{
+        {1.0f, 1.0f, 0.0f}, // yellow
+        {1.0f, 0.0f, 1.0f}, // purple
+        {0.0f, 1.0f, 1.0f}, // cyan
     };
-    std::vector<Vec3f> color{
-        {0.0f, 0.1f, 0.0f},
+    Model model{OBJ::LoadFileData("Assets/teapot.obj")};
+
+#if 0
+    std::vector<Vec3f> tri {
+        {-0.5f, -0.5f, 1.0f},
+        {0.0f, 0.5f, 1.0f},
+        {0.5f, -0.5f, 1.0f},
+    };
+    // CCW
+    std::vector<int> indices{
+        0, 2, 1
+    };
+    std::vector<Vec3f> colors{
+        {1.0f, 0.0f, 0.0f},
         {0.0f, 1.0f, 0.0f},
-        {0.0f, 0.7f, 0.0f},
+        {0.0f, 0.0f, 1.0f},
     };
-    //IndexModel model{std::move(tri)};
+    Model model{tri, indices};
+#endif
+
 #if 0
     // @todo Ideally:
     std::vector<Vec2f> texCoords{
@@ -81,15 +94,27 @@ void QApp::Start()
 #endif
 
     // For deltatime
-    const double secsPerCnt = 1.0 / SDL_GetPerformanceFrequency();
+    const float secsPerCnt = 1.0f / SDL_GetPerformanceFrequency();
     uint64_t startCounts = SDL_GetPerformanceCounter();
-    double accumulatedTime = 0.0;
+    float accumulatedTime = 0.0;
     int frameCnt = 0;
 
+
+    Vec3f eye{0.0f, 0.0f, 6.0f};
+
     // Main loop
+    const uint8_t *isKeyHeldDown = SDL_GetKeyboardState(nullptr);
     bool isRunning = true;
+    float rotAmount = 0;
+    float yaw = 0.0f;   // Amount of rotation in lookDir
+    constexpr float pi = 3.141592653589f;
+    m_qrenderer->SetProjectionMatrix(Math::InitPersp(pi / 2.0f, 1.0f, 1.0f, 100.0f));
     while (isRunning)
     {
+        uint64_t endCounts = SDL_GetPerformanceCounter();
+        float dt = (float)(endCounts - startCounts) * secsPerCnt;
+        startCounts = endCounts;
+
         // Input handling
         for (SDL_Event e; SDL_PollEvent(&e);)
         {
@@ -103,23 +128,61 @@ void QApp::Start()
             case SDL_KEYDOWN:
             {
                 if (e.key.keysym.sym == SDLK_p)
-                {
-                    m_isPaused ^= true;
-                }
-                break;
+                    m_isPaused = !m_isPaused;
             }
             }
         }
 
+        // Camera mvmt
+        if (isKeyHeldDown[SDL_SCANCODE_Q])
+        {
+            eye.y -= 1.0f * dt;
+        }
+        if (isKeyHeldDown[SDL_SCANCODE_E])
+        {
+            eye.y += 1.0f * dt;
+        }
+        if (isKeyHeldDown[SDL_SCANCODE_W])
+        {
+            eye.z -= 1.0f * dt;
+        }
+        if (isKeyHeldDown[SDL_SCANCODE_S])
+        {
+            eye.z += 1.0f * dt;
+        }
+        if (isKeyHeldDown[SDL_SCANCODE_RIGHT])
+        {
+            yaw += 1.0f * dt;
+        }
+        if (isKeyHeldDown[SDL_SCANCODE_LEFT])
+        {
+            yaw -= 1.0f * dt;
+        }
+
+
         if (m_isPaused) { continue; }
 
-        uint64_t endCounts = SDL_GetPerformanceCounter();
-        double dt = (endCounts - startCounts) * secsPerCnt;
-        startCounts = endCounts;
+        // Rotate model
+        Vec3f lookDir{0.0f, 0.0f, -1.0f};
+        Mat44f leftOrRightMat = Math::InitRotation(0.0f, 0.0f, yaw);
+        Vec3f at = Math::MultiplyVecMat(lookDir, leftOrRightMat);
+        at += eye;
+        Mat44f viewMat = m_qrenderer->LookAt(eye, at);
+        rotAmount += 1.0f * dt;
+        if (rotAmount > 6.28f)
+            rotAmount = 0.0f;
+        Mat44f rotMat = Math::InitRotation(0.0f, 0.0f, rotAmount);
+        Model changedModel = model;
+        for (int i = 0; i < changedModel.verts.size(); ++i)
+        {
+            changedModel.verts[i] = Math::MultiplyVecMat(changedModel.verts[i], rotMat);
+            changedModel.verts[i] = Math::MultiplyVecMat(changedModel.verts[i], viewMat);
+        }
 
         
         // Rendering
-        m_qrenderer->Render(tri, color);
+        QRenderer::Mode drawMode = QRenderer::Mode::kNone;
+        m_qrenderer->Render(changedModel, colors, drawMode);
 
         // Frame statistics every 2s
         ++frameCnt;
@@ -141,8 +204,7 @@ void QApp::Shutdown()
     SDL_Quit();
 }
 
-// @todo Bug, ms/frame and fps keep increasing
-void QApp::ShowFrameStatistics(int frameCnt, double dt)
+void QApp::ShowFrameStatistics(int frameCnt, float dt)
 {
     std::stringstream ss;
     ss.setf(std::ios::fixed);

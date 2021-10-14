@@ -23,7 +23,7 @@ public:
     void Start();
     void Shutdown();
 
-    void ShowFrameStatistics(int frameCnt, double dt);
+    void ShowFrameStatistics(int frameCnt, float dt);
 
 private:
     bool m_isPaused;

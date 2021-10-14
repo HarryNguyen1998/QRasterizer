@@ -10,10 +10,6 @@
 class TextureWrapper
 {
 public:
-    // @brief Create empty texture to be drawn on (should only be the bitmap that will be output on screen)
-    // @todo Recover from exceptions, e.g., fails to create texture
-    void Init(SDL_Renderer *renderer, int w, int h);
-
     void Init(const std::string& filePath, SDL_Renderer *renderer);
 
     void UpdateTexture(unsigned char *pixels);

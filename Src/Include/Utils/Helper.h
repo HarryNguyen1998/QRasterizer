@@ -25,11 +25,17 @@ namespace Helper
         std::enable_if_t< std::is_floating_point<T>::value >* = nullptr >
     bool IsEqual(T a, T b)
 	{
-		double absEpsilon = 1e-12;
-        double relEpsilon = 1e-5;
-		if (std::fabs(a - b) <= absEpsilon)
-			return true;
-		return std::fabs(a - b) <= relEpsilon * std::max(std::fabs(a), std::fabs(b));
+        // @note Had to be this large since std::cos(M_PI/2) = -4.37113883e-8 which evaluates to
+        // false with 0.0 in rotMat test code??
+		T absEpsilon = (T)1e-5;
+        T relEpsilon = (T)1e-5;
+        bool result = true;
+        T diff = std::abs(a - b);
+        // Comparing numbers near zero.
+		if (diff <= absEpsilon)
+			return result;
+		result = diff <= (relEpsilon * std::max(std::abs(a), std::abs(b)));
+        return result;
 	}
 
     template<typename T>

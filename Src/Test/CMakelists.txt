@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-add_executable(MainTest MainTest.cpp)
+add_executable(TestMain TestMain.cpp)
 
-target_link_libraries(MainTest PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(TestMain PRIVATE Catch2::Catch2WithMain)
 

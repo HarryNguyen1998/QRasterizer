@@ -2,41 +2,17 @@
 #include "Math/Matrix.h"
 #include "Math/Vector.h"
 
-struct IndexModel;
+struct Model;
 class TextureWrapper;
 struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
 struct SDL_PixelFormat;
 
-// @brief Pinhole camera settings
-struct CamSettings
-{
-    float focalLength;	// mm
-    float filmGateW;    // inch
-    float filmGateH;
-    float zNear;
-    float zFar;
-    float fovY;
-    float imgAspectRatio;
-};
-
 // @brief Provides methods to draw on bitmap
 class RenderContext
 {
 public:
-    // Based on pinhole cam model (view frustum)
-    // The mode doesn't change anything if device gate and film gate resolution are the same
-    enum class ResolutionGateMode
-    {
-        kFill,		// Fit resolution gate into film gate (scale down)
-        kOverscan,	// Fit film gate into resolution gate (scale up)
-    };
-    ResolutionGateMode m_resolutionGateMode = ResolutionGateMode::kOverscan;
-
-    bool Init();
-    void Shutdown();
-
     // @brief color the specified pixel on the pixel array
     void DrawPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
         int x, int y);
@@ -49,25 +25,6 @@ public:
     // as the previous rotated by 30deg
     // @param w, h is width * height = size of the pixel buffer
     void TestDrawLine(unsigned char *pixels, int w, int h, const SDL_PixelFormat *format);
-
-    // @return scalar value, which is the z-comp of Cross(c-a, b-a)
-    float ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
-    int ComputeEdge(const Vec3i& a, const Vec3i& b, const Vec3i &c);
-
-    // @brief Draw a triangle by filling it with a single color
-    // @param w, h is width * height = size of the pixel buffer
-    void DrawFilledTriangle(unsigned char *pixels, unsigned color, int w, int h, const Vec3i& v0,
-        const Vec3i& v1, const Vec3i& v2);
-
-    void RenderContext::DrawShadedTriangle(unsigned char *pixels, int w, int h, const SDL_PixelFormat *format,
-        const Vec3i& v0, const Vec3i& v1, const Vec3i& v2, unsigned c0, unsigned c1, unsigned c2);
-
-    void GetCanvasCoord(float* canvasT, float* canvasR, float* canvasL, float* canvasB,
-        float focalLength, float zNear, ResolutionGateMode mode,
-        float filmGateW, float filmGateH, int imgW, int imgH);
-
-    // @brief Orient where the cam should look
-    Mat44f LookAt(Vec3f eye, Vec3f center, Vec3f up);
 
     // @note remember not to pass a vector with z-value of 0.
     float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2);
@@ -96,41 +53,12 @@ public:
     // @brief Gamma correct the color
     unsigned char DecodeGamma(float value);
     
-    Vec3f NDCToRaster(const Vec3f& v, int w, int h);
-
-#if 0
-    // @brief Draw triangle method, used for a pixel array
-    // @remark v0 v1 v2 are assumed in CW order
-    void DrawTriangle(unsigned char* pxBuffer, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2, unsigned color);
-#endif
-
     // @brief Draw Triangle method using a bitmap
     // @remark v0 v1 v2 are assumed in CW order
     void DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& bitmap, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2,
         Vec2f uv0, Vec2f uv1, Vec2f uv2, const TextureWrapper& tex);
 
     void DrawTriangles(SDL_Renderer* renderer, const TextureWrapper& bitmap, float* zBuffer,
-        const IndexModel& model, const TextureWrapper& tex);
-
-#if 0
-    // @brief Helper method to draw an obj
-    void DrawTriangles(const IndexModel& model, unsigned char* pxBuffer, float* zBuffer, const TextureWrapper& tex);
-#endif
-
-    // @note return by ref to set the values easier. Besides, it should rarely be touched, so putting it as public values
-    // shouldn't affect much
-    CamSettings camSettings;
-
-    // @brief Set the cam settings to some default value for testing purposes
-    // @note imgAspectRatio can only be known in QApp, after we have created a window
-    void SetCamToDefault(float imgAspectRatio);
-
-private:
-    SDL_PixelFormat *format;
-
-    // @brief Bytes per pixel
-    int bpp;
-
-    int pxStride;
+        const Model& model, const TextureWrapper& tex);
 
 };

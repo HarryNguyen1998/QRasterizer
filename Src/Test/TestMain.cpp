@@ -26,7 +26,6 @@ TEST_CASE("Compare \"almost 0.0\" to 0.0", "[Helper::IsEqual]")
     REQUIRE(Helper::IsEqual(a - 1.0, 0.0) == true);
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Vector testing
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,3 +240,59 @@ TEST_CASE("Vector-matrix multiplication", "[Math::Matrix]")
 
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// matrices initialization testing
+///////////////////////////////////////////////////////////////////////////////////////////////////
+TEST_CASE("Useful matrices", "[Math::Matrix]")
+{
+    constexpr float M_PI = 3.14159265358979f;
+    SECTION("Perspective projection matrix")
+    {
+        Mat44f m{Math::InitPersp(M_PI / 4.0f, 1.0f, 0.1f, 100.0f)};
+        Mat44f expected = {
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, -1.0010f, -1.0f,
+            0.0f, 0.0f, -0.1001f, 0.0f};
+        REQUIRE(expected != m);
+    }
+
+    SECTION("Rotation matrix roll")
+    {
+        Vec3f x = {1.0f, 0.0f, 0.0f};
+        Vec3f y = {0.0f, 1.0f, 0.0f};
+        Mat44f m{Math::InitRotation(M_PI / 2.0f, 0.0f, 0.0f)};
+        float a = std::cos(M_PI / 2.0f);
+        REQUIRE(Vec3f{0.0f, 1.0f, 0.0f} == Math::MultiplyVecMat(x, m));
+        REQUIRE(Vec3f{-1.0f, 0.0f, 0.0f} == Math::MultiplyVecMat(y, m));
+    }
+    SECTION("Rotation matrix pitch")
+    {
+        Vec3f y = {0.0f, 1.0f, 0.0f};
+        Vec3f z = {0.0f, 0.0f, 1.0f};
+        Mat44f m{Math::InitRotation(0.0f, M_PI / 2.0f, 0.0f)};
+        REQUIRE(Vec3f{0.0f, 0.0f, 1.0f} == Math::MultiplyVecMat(y, m));
+        REQUIRE(Vec3f{0.0f, -1.0f, 0.0f} == Math::MultiplyVecMat(z, m));
+    }
+    SECTION("Rotation matrix yaw")
+    {
+        Vec3f z = {0.0f, 0.0f, 1.0f};
+        Vec3f x = {1.0f, 0.0f, 0.0f};
+        Mat44f m{Math::InitRotation(0.0f, 0.0f, M_PI / 2.0f)};
+        REQUIRE(Vec3f{1.0f, 0.0f, 0.0f} == Math::MultiplyVecMat(z, m));
+        REQUIRE(Vec3f{0.0f, 0.0f, -1.0f} == Math::MultiplyVecMat(x, m));
+    }
+
+    SECTION("Affine rotation")
+    {
+        // Up vec is centered around [1 1 1]
+        Vec3f y = {1.0f, 2.0f, 1.0f};
+        Vec3f z = {1.0f, 1.0f, 2.0f};
+        Mat44f m{Math::InitRotation(0.0f, M_PI / 2.0f, 0.0f)};
+        REQUIRE(Vec3f{1.0f, 1.0f, 2.0f} == Math::AffineRotation(y, Vec3f{1.0f, 1.0f, 1.0f}, m));
+        REQUIRE(Vec3f{1.0f, 0.0f, 1.0f} == Math::AffineRotation(z, Vec3f{1.0f, 1.0f, 1.0f}, m));
+    }
+
+}
+
