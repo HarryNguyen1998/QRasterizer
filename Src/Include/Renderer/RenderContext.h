@@ -13,19 +13,6 @@ struct SDL_PixelFormat;
 class RenderContext
 {
 public:
-    // @brief color the specified pixel on the pixel array
-    void DrawPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
-        int x, int y);
-
-    // @brief Draw a line from (x0, y0) to (x1, y1) on the pixel array using Bresenham algorithm
-    void DrawLine(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
-        int x0, int x1, int y0, int y1);
-
-    // @brief Draw 12 lines starting from center of screen, with each new line
-    // as the previous rotated by 30deg
-    // @param w, h is width * height = size of the pixel buffer
-    void TestDrawLine(unsigned char *pixels, int w, int h, const SDL_PixelFormat *format);
-
     // @note remember not to pass a vector with z-value of 0.
     float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2);
 

@@ -52,19 +52,27 @@ bool QApp::Init(const std::string& title, int w, int h)
 
 void QApp::Start()
 {
+#if 1
     std::vector<Vec3f> colors{
         {1.0f, 1.0f, 0.0f}, // yellow
         {1.0f, 0.0f, 1.0f}, // purple
         {0.0f, 1.0f, 1.0f}, // cyan
     };
-    Model model{OBJ::LoadFileData("Assets/teapot.obj")};
-
+    Model model{OBJ::LoadFileData("Assets/cube.obj")};
+#else
 #if 0
-    std::vector<Vec3f> tri {
-        {-0.5f, -0.5f, 1.0f},
-        {0.0f, 0.5f, 1.0f},
-        {0.5f, -0.5f, 1.0f},
+    std::vector<Vec3f> tri{
+        {-0.9f, 0.9f, 1.0f},
+        {0.9f, 0.9f, -1.0f},
+        {0.0f, 0.0f, 0.0f},
     };
+#endif
+    std::vector<Vec3f> tri{
+        {-0.5f, -0.5f, 0.0f},
+        {0.0f, 0.5f, 0.0f},
+        {0.5f, -0.5f, 0.0f},
+    };
+
     // CCW
     std::vector<int> indices{
         0, 2, 1
@@ -100,7 +108,7 @@ void QApp::Start()
     int frameCnt = 0;
 
 
-    Vec3f eye{0.0f, 0.0f, 6.0f};
+    Vec3f eye{0.0f, 0.0f, 4.0f};
 
     // Main loop
     const uint8_t *isKeyHeldDown = SDL_GetKeyboardState(nullptr);
@@ -108,7 +116,7 @@ void QApp::Start()
     float rotAmount = 0;
     float yaw = 0.0f;   // Amount of rotation in lookDir
     constexpr float pi = 3.141592653589f;
-    m_qrenderer->SetProjectionMatrix(Math::InitPersp(pi / 2.0f, 1.0f, 1.0f, 100.0f));
+    m_qrenderer->SetProjectionMatrix(Math::InitPersp(pi / 2.0f, (float)m_w / m_h, 0.5f, 100.0f));
     while (isRunning)
     {
         uint64_t endCounts = SDL_GetPerformanceCounter();
@@ -136,29 +144,36 @@ void QApp::Start()
         // Camera mvmt
         if (isKeyHeldDown[SDL_SCANCODE_Q])
         {
-            eye.y -= 1.0f * dt;
+            eye.y -= 2.0f * dt;
         }
         if (isKeyHeldDown[SDL_SCANCODE_E])
         {
-            eye.y += 1.0f * dt;
+            eye.y += 2.0f * dt;
         }
         if (isKeyHeldDown[SDL_SCANCODE_W])
         {
-            eye.z -= 1.0f * dt;
+            eye.z -= 2.0f * dt;
         }
         if (isKeyHeldDown[SDL_SCANCODE_S])
         {
-            eye.z += 1.0f * dt;
+            eye.z += 2.0f * dt;
+        }
+        if (isKeyHeldDown[SDL_SCANCODE_D])
+        {
+            eye.x += 2.0f * dt;
+        }
+        if (isKeyHeldDown[SDL_SCANCODE_A])
+        {
+            eye.x -= 2.0f * dt;
         }
         if (isKeyHeldDown[SDL_SCANCODE_RIGHT])
         {
-            yaw += 1.0f * dt;
+            yaw -= 2.0f * dt;
         }
         if (isKeyHeldDown[SDL_SCANCODE_LEFT])
         {
-            yaw -= 1.0f * dt;
+            yaw += 2.0f * dt;
         }
-
 
         if (m_isPaused) { continue; }
 
@@ -168,14 +183,11 @@ void QApp::Start()
         Vec3f at = Math::MultiplyVecMat(lookDir, leftOrRightMat);
         at += eye;
         Mat44f viewMat = m_qrenderer->LookAt(eye, at);
-        rotAmount += 1.0f * dt;
-        if (rotAmount > 6.28f)
-            rotAmount = 0.0f;
-        Mat44f rotMat = Math::InitRotation(0.0f, 0.0f, rotAmount);
         Model changedModel = model;
+        //Mat44f rotMat = Math::InitRotation(0.0f, 0.0f, 0.0f);
         for (int i = 0; i < changedModel.verts.size(); ++i)
         {
-            changedModel.verts[i] = Math::MultiplyVecMat(changedModel.verts[i], rotMat);
+            //changedModel.verts[i] = Math::MultiplyVecMat(changedModel.verts[i], rotMat);
             changedModel.verts[i] = Math::MultiplyVecMat(changedModel.verts[i], viewMat);
         }
 
@@ -187,7 +199,7 @@ void QApp::Start()
         // Frame statistics every 2s
         ++frameCnt;
         accumulatedTime += dt;
-        if (accumulatedTime > 2.0)
+        if (accumulatedTime > 1.0f)
         {
             ShowFrameStatistics(frameCnt, dt);
             accumulatedTime = 0.0;

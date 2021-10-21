@@ -49,7 +49,7 @@ void QRenderer::SetProjectionMatrix(Mat44f m) { m_projMat = std::move(m); }
 Mat44f QRenderer::LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up)
 {
     Vec3f camForward = Math::Normal(eye - at);
-    Vec3f camRight = Math::Cross(Math::Normal(up), camForward);
+    Vec3f camRight = Math::Normal(Math::Cross(up, camForward));
     Vec3f camUp = Cross(camForward, camRight);
 
     Mat44f viewMat{};
@@ -61,6 +61,11 @@ Mat44f QRenderer::LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up)
         viewMat(i, 2) = camForward[i];
         viewMat(3, i) = -eye[i];
     }
+#if 0
+    viewMat(3, 0) = -Math::Dot(camRight, eye);
+    viewMat(3, 1) = -Math::Dot(camUp, eye);
+    viewMat(3, 2) = -Math::Dot(camForward, eye);
+#endif
 
     return viewMat;
 }

@@ -7,89 +7,6 @@
 #include "Renderer/Texture.h"
 #include "Utils/Helper.h"
 
-void RenderContext::DrawPt(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
-    int x, int y)
-{
-    unsigned char* p = pixels + (y * pixelStride + x) * bpp;
-    *(unsigned *)p = color;
-}
-
-void RenderContext::DrawLine(unsigned char* pixels, unsigned color, int bpp, int pixelStride,
-    int x0, int x1, int y0, int y1)
-{
-    bool isSteep = false;
-    if (std::abs(y1 - y0) > std::abs(x1 - x0))
-    {
-        isSteep = true;
-        std::swap(x0, y0);
-        std::swap(x1, y1);
-    }
-
-    if (x0 > x1)
-    {
-        std::swap(x0, x1);
-        std::swap(y0, y1);
-    }
-
-    int dx = x1 - x0;
-    int dy = y1 - y0;
-    int yDir = 1;
-    if (dy < 0)
-    {
-        dy = -dy;
-        yDir = -1;
-    }
-    int e2 = 2 * dy - dx;
-    int y = y0;
-    for (int x = x0; x <= x1; ++x)
-    {
-        if (isSteep) { DrawPt(pixels, color, bpp, pixelStride, y, x); }
-        else { DrawPt(pixels, color, bpp, pixelStride, x, y); }
-        e2 += 2 * dy;
-        if (e2 > 0)
-        {
-            e2 -= 2 * dx;
-            y += yDir;
-        }
-    }
-
-}
-
-void RenderContext::TestDrawLine(unsigned char *pixels, int scrW, int scrH, const SDL_PixelFormat *format)
-{
-    float pi = (float)M_PI;
-    float angle = pi / 6;
-    float rotMat[4] = {cos(angle), sin(angle), -sin(angle), cos(angle)};
-
-    unsigned red = SDL_MapRGBA(format, 255, 0, 0, 255);
-    unsigned green = SDL_MapRGBA(format, 0, 255, 0, 255);
-
-    int x0 = scrW / 2 - 1;
-    int y0 = scrH / 2 - 1;
-    // Define length as right before width/height (choose the smaller val so it doesn't extend outside of screen)
-    float length = (x0 > y0) ? (float)y0 : (float)x0;
-    float endP[2] = {length, 0.0f};
-
-    for (int i = 0; i < 12; ++i)
-    {
-        float newEndP[2]{endP[0] * rotMat[0] + endP[1] * rotMat[2], endP[0] * rotMat[1] + endP[1] * rotMat[3]};
-        int x1 = (int)endP[0] + x0;
-        int y1 = (int)endP[1] + y0;
-        if (x1 - x0 == 0 || y1 - y0 == 0)
-        {
-            DrawLine(pixels, red, 4, scrW, x0, x1, y0, y1);
-        }
-        else
-        {
-            DrawLine(pixels, green, 4, scrW, x0, x1, y0, y1);
-        }
-
-        endP[0] = newEndP[0];
-        endP[1] = newEndP[1];
-    }
-
-}
-
 #if 0
 // @brief Test if depth calculation is correct by drawing the depth buffer on screen
 void DrawDepth(SDL_Surface* surface, const std::vector<float>& zBuffer, int x, int y, int pxStride)
@@ -98,42 +15,6 @@ void DrawDepth(SDL_Surface* surface, const std::vector<float>& zBuffer, int x, i
     auto decodedColor = DecodeGamma(intensity);
     unsigned color = SDL_MapRGB(surface->format, decodedColor, decodedColor, decodedColor);
     PutPixel((unsigned char*)surface->pixels, color, 4, pxStride, x, y);
-}
-
-// @brief Draw wire frame of the obj on screen
-void DrawWireframe(SDL_Surface* surface, const IndexModel& model)
-{
-    int w = surface->w;
-    int h = surface->h;
-    for (int i = 0; i < model.vertIndices.size(); i += 3)
-    {
-        Vec3f v0Raster = model.verts[model.vertIndices[i]];
-        Vec3f v1Raster = model.verts[model.vertIndices[i + 1]];
-        Vec3f v2Raster = model.verts[model.vertIndices[i + 2]];
-
-        int x0 = (int)((v0Raster.x + 1) / 2.0f * w);
-        int y0 = (int)((1 - v0Raster.y) / 2.0f * h);
-
-        int x1 = (int)((v1Raster.x + 1) / 2.0f * w);
-        int y1 = (int)((1 - v1Raster.y) / 2.0f * h);
-
-        int x2 = (int)((v2Raster.x + 1) / 2.0f * w);
-        int y2 = (int)((1 - v2Raster.y) / 2.0f * h);
-
-        // No clipping yet!
-        int xMin = Helper::Min3(x0, x1, x2);
-        int yMin = Helper::Min3(y0, y1, y2);
-        int xMax = Helper::Max3(x0, x1, x2);
-        int yMax = Helper::Max3(y0, y1, y2);
-        if (xMax > w - 1 || xMin < 0 || yMax > h - 1 || yMin < 0) { continue; }
-
-        DrawLine((unsigned*)surface->pixels, SDL_MapRGB(surface->format, 255, 255, 255),
-            w, x0, y0, x1, y1);
-        DrawLine((unsigned*)surface->pixels, SDL_MapRGB(surface->format, 255, 255, 255),
-            w, x1, y1, x2, y2);
-        DrawLine((unsigned*)surface->pixels, SDL_MapRGB(surface->format, 255, 255, 255),
-            w, x2, y2, x0, y0);
-    }
 }
 #endif
 
