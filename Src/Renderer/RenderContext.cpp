@@ -7,38 +7,20 @@
 #include "Renderer/Texture.h"
 #include "Utils/Helper.h"
 
-#if 0
-// @brief Test if depth calculation is correct by drawing the depth buffer on screen
-void DrawDepth(SDL_Surface* surface, const std::vector<float>& zBuffer, int x, int y, int pxStride)
-{
-    float intensity = (1.0f - zBuffer[x + y * pxStride]) * 0.5f;
-    auto decodedColor = DecodeGamma(intensity);
-    unsigned color = SDL_MapRGB(surface->format, decodedColor, decodedColor, decodedColor);
-    PutPixel((unsigned char*)surface->pixels, color, 4, pxStride, x, y);
-}
-#endif
-
-float RenderContext::ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2)
-{
-    float depthInverse = (w0 / v0.z) + (w1 / v1.z) + (w2 / v2.z);
-    float depth = (1 / depthInverse);
-    return depth;
-}
-
 unsigned char RenderContext::DecodeGamma(float value)
 {
     int quantizedValue = (int)(value * 255 + 0.5f);
     return g_gammaDecodedTable[quantizedValue];
 }
 
-void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& bitmap, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2,
-    Vec2f uv0, Vec2f uv1, Vec2f uv2, const TextureWrapper& tex)
+void RenderContext::DrawTriangle(SDL_Renderer* renderer, const QTexture& bitmap, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2,
+    Vec2f uv0, Vec2f uv1, Vec2f uv2, const QTexture& tex)
 {
     // Renderer settings. We make sure that the obj is shifted to -z coord.
     float zNear = 0.125f;
     float zFar = 100.0f;
     float fovY = 60.0f * (float)M_PI / 180.0f;
-    float imgAspectRatio = (float)bitmap.Width() / bitmap.Height();
+    float imgAspectRatio = (float)bitmap.GetW() / bitmap.GetH();
     Mat44f viewMat = Math::InitTranslation(0.0f, 0.0f, -3.0f);
     Mat44f projMat = Math::InitPersp(fovY, imgAspectRatio, zNear, zFar);
 
@@ -49,9 +31,9 @@ void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& b
     v2 = MultiplyPtMat(v2, viewMat * projMat);
 #endif
 
-    Vec3f v0Raster = NDCToRaster(v0, bitmap.Width(), bitmap.Height());
-    Vec3f v1Raster = NDCToRaster(v1, bitmap.Width(), bitmap.Height());
-    Vec3f v2Raster = NDCToRaster(v2, bitmap.Width(), bitmap.Height());
+    Vec3f v0Raster = NDCToRaster(v0, bitmap.GetW(), bitmap.GetH());
+    Vec3f v1Raster = NDCToRaster(v1, bitmap.GetW(), bitmap.GetH());
+    Vec3f v2Raster = NDCToRaster(v2, bitmap.GetW(), bitmap.GetH());
 
     // Prep for edge test
     Vec3f edge0 = v2Raster - v1Raster;
@@ -62,8 +44,8 @@ void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& b
     Vec2i bbMin, bbMax;
     bbMin.x = std::max(0, (int)Helper::Min3(v0Raster.x, v1Raster.x, v2Raster.x));
     bbMin.y = std::max(0, (int)Helper::Min3(v0Raster.y, v1Raster.y, v2Raster.y));
-    bbMax.x = std::min((int)bitmap.Width(), (int)Helper::Max3(v0Raster.x, v1Raster.x, v2Raster.x));
-    bbMax.y = std::min((int)bitmap.Height(), (int)Helper::Max3(v0Raster.y, v1Raster.y, v2Raster.y));
+    bbMax.x = std::min((int)bitmap.GetW(), (int)Helper::Max3(v0Raster.x, v1Raster.x, v2Raster.x));
+    bbMax.y = std::min((int)bitmap.GetH(), (int)Helper::Max3(v0Raster.y, v1Raster.y, v2Raster.y));
 
     for (int y = bbMin.y; y <= bbMax.y; ++y)
     {
@@ -101,9 +83,9 @@ void RenderContext::DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& b
             Vec2f uv = uv0 * w0 + uv1 * w1 + uv2 * w2;
 
             // = sign here because we want to draw the img next frame too
-            if (zBuffer[y * bitmap.Width() + x] >= px.z)
+            if (zBuffer[y * bitmap.GetW() + x] >= px.z)
             {
-                zBuffer[y * bitmap.Width() + x] = px.z;
+                zBuffer[y * bitmap.GetW() + x] = px.z;
 #if 0
                 tex.RenderPixel(renderer, (int)(uv.x * tex.Width()), (int)(uv.y * tex.Height()),
                     (int)px.x, (int)px.y);

@@ -7,10 +7,9 @@
 #include "Renderer/Rasterizer.h"
 #include "Renderer/Triangle.h"
 
-Vec3f color;
-
-void Rasterizer::Rasterize(uint32_t *pixels, int w, int h, const Model& model, const Mat44f& projMat, const std::vector<Vec3f>& colors)
+void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const Model& model, const Mat44f& projMat, const std::vector<Vec3f>& colors)
 {
+    bool shouldDrawDepth = false;
     assert(!model.verts.empty());
     assert(!model.vertIndices.empty());
 
@@ -29,7 +28,7 @@ void Rasterizer::Rasterize(uint32_t *pixels, int w, int h, const Model& model, c
         Vec3f lightDir = Math::Normal(Vec3f{0.0f, -1.0f, -1.0f});
         // @note Since it survives back face culling, surfNormal should be (+)
         float dp = Math::Dot(lightDir, surfNormal);
-        color = Vec3f{1.0f, 1.0f, 1.0f} * -dp;
+        Vec3f color = Vec3f{1.0f, 1.0f, 1.0f} * -dp;
 
         // To clip space
         std::vector<float> wCoords = {-v0.z, -v1.z, -v2.z};
@@ -107,12 +106,28 @@ void Rasterizer::Rasterize(uint32_t *pixels, int w, int h, const Model& model, c
             v1.y = (v1.y + 1.0f) * h / 2;
             v2.x = (v2.x + 1.0f) * w / 2;
             v2.y = (v2.y + 1.0f) * h / 2;
+            assert(v0.z <= 1.0f && v0.z >= 0.0f &&
+                v1.z <= 1.0f && v1.z >= 0.0f &&
+                v2.z <= 1.0f && v2.z >= 0.0f);
+            float oneOverW0 = 1.0f / clippedTris[j].wCoords[0];
+            float oneOverW1 = 1.0f / clippedTris[j].wCoords[1];
+            float oneOverW2 = 1.0f / clippedTris[j].wCoords[2];
 
             float areaOfParallelogram = ComputeEdge(v0, v1, v2);
             int bbMinX = (int)Helper::Min3(v0.x, v1.x, v2.x);
             int bbMaxX = (int)Helper::Max3(v0.x, v1.x, v2.x);
             int bbMinY = (int)Helper::Min3(v0.y, v1.y, v2.y);
             int bbMaxY = (int)Helper::Max3(v0.y, v1.y, v2.y);
+
+            // @note If 2 verts are nearly the same x/y coord, bbX/bbY will be outside of screen
+            // boundary. I don't know why does this happen, since I thought clipping should have
+            // eliminated that. Maybe some bug? Anyways, this seems to fix it
+            if (bbMinX > w - 1 || bbMinY > h - 1 || bbMaxX < 0 || bbMaxY < 0)
+                continue;
+            bbMinX = std::max(0, bbMinX);
+            bbMinY = std::max(0, bbMinY);
+            bbMaxX = std::min(w - 1, bbMaxX);
+            bbMaxY = std::min(h - 1, bbMaxY);
 
             for (int y = bbMinY; y <= bbMaxY; ++y)
             {
@@ -129,6 +144,7 @@ void Rasterizer::Rasterize(uint32_t *pixels, int w, int h, const Model& model, c
                     float t0 = e12 / areaOfParallelogram;
                     float t1 = e20 / areaOfParallelogram;
                     float t2 = e01 / areaOfParallelogram;
+                    float oneOverW = t0 * oneOverW0 + t1 * oneOverW1 + t2 * oneOverW2;
 
 #if 0
                     uint8_t r = ClampChannel(colors[j].r * t0 + colors[j + 1].r * t1 + colors[j + 2].r * t2);
@@ -139,7 +155,23 @@ void Rasterizer::Rasterize(uint32_t *pixels, int w, int h, const Model& model, c
                     uint8_t g = ClampChannel(color.g);
                     uint8_t b = ClampChannel(color.b);
 
-                    pixels[x + y * w] = ToColor(r, g, b, 255);
+                    // @note If z < zBuffer, the triangle is closer, and update new zBuffer.
+                    // Instead, since we use oneOverZ, it's actually inverse, and zBuffer filled
+                    // with 0 actually represent the furthest (infinitely)
+                    if (oneOverW > zBuffer[x + y * w])
+                    {
+                        if (shouldDrawDepth)
+                        {
+                            zBuffer[x + y * w] = oneOverW;
+                            uint8_t c = ClampChannel(oneOverW);
+                            pixels[x + y * w] = ToColor(c, c, c, 255);
+                        }
+                        else
+                        {
+                            pixels[x + y * w] = ToColor(r, g, b, 255);
+                            zBuffer[x + y * w] = oneOverW;
+                        }
+                    }
                 }
             }
         }   // End of insidePts
@@ -250,10 +282,10 @@ std::vector<Triangle> Rasterizer::ClipTriangleAgainstPlane(Vec3f planeN, Vec3f p
     std::vector<Vec3f> outsidePts;
     outsidePts.reserve(3);  // At most all 3 pts are outside
 
-    std::vector<float> insidePtAttrs;
-    insidePtAttrs.reserve(6);  // At most all 2 tris are formed
-    std::vector<float> outsidePtAttrs;
-    outsidePtAttrs.reserve(3);  // At most all 3 pts are outside
+    std::vector<float> insidePtW;
+    insidePtW.reserve(6);  // At most all 2 tris are formed
+    std::vector<float> outsidePtW;
+    outsidePtW.reserve(3);  // At most all 3 pts are outside
 
     float planeD = Math::Dot(planeN, planePt);
     float d0 = Math::Dot(planeN, inTri.verts[0]);
@@ -262,33 +294,33 @@ std::vector<Triangle> Rasterizer::ClipTriangleAgainstPlane(Vec3f planeN, Vec3f p
     if (d0 >= planeD)
     {
         insidePts.push_back(inTri.verts[0]);
-        insidePtAttrs.push_back(inTri.wCoords[0]);
+        insidePtW.push_back(inTri.wCoords[0]);
     }
     else
     {
         outsidePts.push_back(inTri.verts[0]);
-        outsidePtAttrs.push_back(inTri.wCoords[0]);
+        outsidePtW.push_back(inTri.wCoords[0]);
     }
 
     if (d1 >= planeD)
     {
         insidePts.push_back(inTri.verts[1]);
-        insidePtAttrs.push_back(inTri.wCoords[1]);
+        insidePtW.push_back(inTri.wCoords[1]);
     }
     else
     {
         outsidePts.push_back(inTri.verts[1]);
-        outsidePtAttrs.push_back(inTri.wCoords[1]);
+        outsidePtW.push_back(inTri.wCoords[1]);
     }
     if (d2 >= planeD)
     {
         insidePts.push_back(inTri.verts[2]);
-        insidePtAttrs.push_back(inTri.wCoords[2]);
+        insidePtW.push_back(inTri.wCoords[2]);
     }
     else
     {
         outsidePts.push_back(inTri.verts[2]);
-        outsidePtAttrs.push_back(inTri.wCoords[2]);
+        outsidePtW.push_back(inTri.wCoords[2]);
     }
 
     // Triangle is outside
@@ -311,23 +343,20 @@ std::vector<Triangle> Rasterizer::ClipTriangleAgainstPlane(Vec3f planeN, Vec3f p
             outsidePts[0] = tmp;
         }
 
-        color = Vec3f{1.0f, 0.0f, 0.0f};
-
         float tb, ta;
-        // Assuming v0 v1 v2 and v0, v2 are clipped, then new tri is v1 b a, where pt a is
-        // intersection in ray v0v1, pt b is instersection in ray v2v1,
-        insidePts.push_back(IntersectRayPlane(outsidePts[1], insidePts[0], planeD, planeN, &tb));   // v2v1
-        insidePts.push_back(IntersectRayPlane(outsidePts[0], insidePts[0], planeD, planeN, &ta));   // v0v1
+        // Assuming v0 v1 v2, outsidePt = v0 v1 are clipped, insidePt = v2, a is intersection in
+        // ray v0v2, b is intersection in ray v1v2
+        Vec3f a = IntersectRayPlane(outsidePts[0], insidePts[0], planeD, planeN, &ta);  // v0v2
+        Vec3f b = IntersectRayPlane(outsidePts[1], insidePts[0], planeD, planeN, &tb);  // v1v2
 
-        float v1Attribute = insidePtAttrs[0];
+        float lineDir1 = insidePtW[0] - outsidePtW[0];
+        float aW = outsidePtW[0] + ta * lineDir1;
 
-        float lineDir1 = insidePtAttrs[0] - outsidePtAttrs[0];
-        float aAttribute = outsidePtAttrs[0] + ta * lineDir1;
+        float lineDir2 = insidePtW[0] - outsidePtW[1];
+        float bW = outsidePtW[1] + tb * lineDir2;
 
-        float lineDir2 = insidePtAttrs[0] - outsidePtAttrs[1];
-        float bAttribute = outsidePtAttrs[1] + tb * lineDir2;
-
-        result.push_back(Triangle{insidePts[0], insidePts[1], insidePts[2], v1Attribute, bAttribute, aAttribute});
+        // New tri is v2ab
+        result.push_back(Triangle{insidePts[0], b, a, insidePtW[0], bW, aW});
     }
 
     if (outsidePts.size() == 1 && insidePts.size() == 2)
@@ -339,26 +368,21 @@ std::vector<Triangle> Rasterizer::ClipTriangleAgainstPlane(Vec3f planeN, Vec3f p
             insidePts[0] = tmp;
         }
 
-        color = Vec3f{0.0f, 1.0f, 0.0f};
-
-        // Assuming v0 v1 v2, outsidePts = v0 is clipped, insidePts are v1 v2, a is intersection in
-        // ray v0v1, b is intersection in ray v0v2
+        // Assuming v0 v1 v2, outsidePt = v2 is clipped, insidePt = v0 v1, a is intersection in ray
+        // v2v0, b is intersection in ray v2v1
         float ta, tb;
-        Vec3f a = IntersectRayPlane(outsidePts[0], insidePts[0], planeD, planeN, &ta);  // v0v1
-        Vec3f b = IntersectRayPlane(outsidePts[0], insidePts[1], planeD, planeN, &tb);  // v0v2
+        Vec3f a = IntersectRayPlane(outsidePts[0], insidePts[0], planeD, planeN, &ta);  // v2v0
+        Vec3f b = IntersectRayPlane(outsidePts[0], insidePts[1], planeD, planeN, &tb);  // v2v1
 
-        float v1Attribute = insidePtAttrs[0];
-        float v2Attribute = insidePtAttrs[1];
+        float lineDir1 = insidePtW[0] - outsidePtW[0];
+        float aW = outsidePtW[0] + ta * lineDir1;
 
-        float lineDir1 = insidePtAttrs[0] - outsidePtAttrs[0];
-        float aAttribute = outsidePtAttrs[0] + ta * lineDir1;
+        float lineDir2 = insidePtW[1] - outsidePtW[0];
+        float bW = outsidePtW[0] + tb * lineDir2;
 
-        float lineDir2 = insidePtAttrs[1] - outsidePtAttrs[0];
-        float bAttribute = outsidePtAttrs[0] + tb * lineDir2;
-
-        // Push v2av1, and v2ba
-        result.push_back(Triangle{insidePts[0], insidePts[1], b, v1Attribute, v2Attribute, bAttribute});
-        result.push_back(Triangle{insidePts[0], b, a, v1Attribute, bAttribute, aAttribute});
+        // New tris are v0v1b, v0ba
+        result.push_back(Triangle{insidePts[0], insidePts[1], b, insidePtW[0], insidePtW[1], bW});
+        result.push_back(Triangle{insidePts[0], b, a, insidePtW[0], bW, aW});
     }
 
     // 1 new tri or 2 new tri

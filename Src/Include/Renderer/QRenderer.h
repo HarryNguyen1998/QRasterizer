@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "Math/Vector.h"
@@ -10,7 +11,7 @@
 
 // Forward declarations
 struct Model;
-struct SDL_PixelFormat;
+class QTexture;
 
 // @brief Controls the window
 class QRenderer
@@ -26,13 +27,17 @@ public:
 public:
     bool Init(SDL_Window *window, int w, int h);
 
-    void Render(const Model& model, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode);
+    void Render(const Model& model, const QTexture& texture, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode);
 
     // @brief Move the projection matrix from caller 
     void SetProjectionMatrix(Mat44f m);
 
     // @brief Construct a view matrix.
     Mat44f LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up = Vec3f{0.0f, 1.0f, 0.0f});
+
+    // @brief Create texture from filepath.
+    // @return If renderer hasn't been initialized, return an empty texture
+    QTexture CreateTexture(const std::string& filePath);
 
 private:
     // @brief Information about rendering that is only used for the window

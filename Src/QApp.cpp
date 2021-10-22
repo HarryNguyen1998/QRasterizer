@@ -59,19 +59,22 @@ void QApp::Start()
         {0.0f, 1.0f, 1.0f}, // cyan
     };
     Model model{OBJ::LoadFileData("Assets/cube.obj")};
+    QTexture texture = m_qrenderer->CreateTexture("Assets/texture-test.jpg");
 #else
-#if 0
+#if 1
     std::vector<Vec3f> tri{
         {-0.9f, 0.9f, 1.0f},
         {0.9f, 0.9f, -1.0f},
         {0.0f, 0.0f, 0.0f},
     };
 #endif
+#if 0
     std::vector<Vec3f> tri{
         {-0.5f, -0.5f, 0.0f},
         {0.0f, 0.5f, 0.0f},
         {0.5f, -0.5f, 0.0f},
     };
+#endif
 
     // CCW
     std::vector<int> indices{
@@ -194,7 +197,7 @@ void QApp::Start()
         
         // Rendering
         QRenderer::Mode drawMode = QRenderer::Mode::kNone;
-        m_qrenderer->Render(changedModel, colors, drawMode);
+        m_qrenderer->Render(changedModel, texture, colors, drawMode);
 
         // Frame statistics every 2s
         ++frameCnt;

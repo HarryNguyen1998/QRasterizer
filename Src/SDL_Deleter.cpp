@@ -16,3 +16,8 @@ void SDL_Deleter::operator()(SDL_Texture *texture)
 {
     SDL_DestroyTexture(texture);
 }
+
+void SDL_Deleter::operator()(SDL_Surface *surface)
+{
+    SDL_FreeSurface(surface);
+}

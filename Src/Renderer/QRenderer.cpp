@@ -29,19 +29,24 @@ bool QRenderer::Init(SDL_Window *window, int w, int h)
     }
 
     m_pixels = std::vector<uint32_t>(m_w * m_h, 0);
-    m_zBuffer.reserve(w * h);
+    m_zBuffer = std::vector<float>(m_w * m_h, 0.0f);
 
     return true;
 }
 
-void QRenderer::Render(const Model& model, const std::vector<Vec3f>& colors, Mode drawMode)
+void QRenderer::Render(const Model& model, const QTexture& texture, const std::vector<Vec3f>& colors, Mode drawMode)
 {
-    std::fill(m_pixels.begin(), m_pixels.end(), 0);
     SDL_RenderClear(m_renderer.get());
-    m_rasterizer.Rasterize(m_pixels.data(), m_w, m_h, model, m_projMat, colors);
+    SDL_RenderCopyEx(m_renderer.get(), texture.GetTexture(), nullptr, nullptr, 0, nullptr, SDL_FLIP_NONE);
+    SDL_RenderPresent(m_renderer.get());
+#if 0
+    m_rasterizer.Rasterize(m_pixels.data(), m_zBuffer.data(), m_w, m_h, model, m_projMat, colors);
     SDL_UpdateTexture(m_bitmap.get(), nullptr, reinterpret_cast<const void*>(m_pixels.data()), m_w * 4);
     SDL_RenderCopyEx(m_renderer.get(), m_bitmap.get(), nullptr, nullptr, 0, nullptr, SDL_FLIP_VERTICAL);
     SDL_RenderPresent(m_renderer.get());
+    std::fill(m_pixels.begin(), m_pixels.end(), 0);
+    std::fill(m_zBuffer.begin(), m_zBuffer.end(), 0.0f);
+#endif
 }
 
 void QRenderer::SetProjectionMatrix(Mat44f m) { m_projMat = std::move(m); }
@@ -68,5 +73,18 @@ Mat44f QRenderer::LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up)
 #endif
 
     return viewMat;
+}
+
+QTexture QRenderer::CreateTexture(const std::string& filePath)
+{
+    QTexture texture;
+    if (!m_renderer)
+    {
+        std::cerr << "Uh oh, renderer hasn't been initialized! Consider calling QRenderer::Init() first.\n";
+        return texture;
+    }
+
+    texture.Init(filePath, m_renderer.get());
+    return texture;
 }
 

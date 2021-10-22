@@ -3,7 +3,7 @@
 #include "Math/Vector.h"
 
 struct Model;
-class TextureWrapper;
+class QTexture;
 struct SDL_Window;
 struct SDL_Renderer;
 struct SDL_Texture;
@@ -13,9 +13,6 @@ struct SDL_PixelFormat;
 class RenderContext
 {
 public:
-    // @note remember not to pass a vector with z-value of 0.
-    float ComputeDepth(const Vec3f& v0, const Vec3f& v1, const Vec3f& v2, float w0, float w1, float w2);
-
     // @brief Gamma decoded LUT with gamma = 2.2, 8-bit.
     // @see https://scantips.com/lights/gamma3.html
     const unsigned char g_gammaDecodedTable[256] = 
@@ -42,10 +39,10 @@ public:
     
     // @brief Draw Triangle method using a bitmap
     // @remark v0 v1 v2 are assumed in CW order
-    void DrawTriangle(SDL_Renderer* renderer, const TextureWrapper& bitmap, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2,
-        Vec2f uv0, Vec2f uv1, Vec2f uv2, const TextureWrapper& tex);
+    void DrawTriangle(SDL_Renderer* renderer, const QTexture& bitmap, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2,
+        Vec2f uv0, Vec2f uv1, Vec2f uv2, const QTexture& tex);
 
-    void DrawTriangles(SDL_Renderer* renderer, const TextureWrapper& bitmap, float* zBuffer,
-        const Model& model, const TextureWrapper& tex);
+    void DrawTriangles(SDL_Renderer* renderer, const QTexture& bitmap, float* zBuffer,
+        const Model& model, const QTexture& tex);
 
 };

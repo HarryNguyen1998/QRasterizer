@@ -10,7 +10,7 @@ struct Triangle;
 class Rasterizer
 {
 public:
-    void Rasterize(uint32_t *pixels, int w, int h, const Model& model, const Mat44f& projMat, const std::vector<Vec3f>& colors);
+    void Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const Model& model, const Mat44f& projMat, const std::vector<Vec3f>& colors);
 private:
     float ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
 

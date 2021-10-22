@@ -5,14 +5,16 @@
 #include <string>
 #include <unordered_map>
 
+#include "SDL_Deleter.h"
+
 // @brief A wrapper that handles texture data, using SDL_Texture
 // @note Do i need an IsEmpty() method, or handle that case in Release is better?
-class TextureWrapper
+class QTexture
 {
 public:
     void Init(const std::string& filePath, SDL_Renderer *renderer);
-
-    void UpdateTexture(unsigned char *pixels);
+    void LockTexture();
+    void UnlockTexture();
 
     // @brief Blit the texture to the rendering target
     // @param clip is the width and height we take from texture to blit to the rendering target. If
@@ -25,18 +27,16 @@ public:
 
     void RenderPixel(SDL_Renderer *renderer, int srcX, int srcY, int destX, int destY) const;
 
-    void Shutdown();
-
-    int Width() const;
-    int Height() const;
-    SDL_Texture *GetTextureObj();
-    const SDL_PixelFormat *TextureWrapper::GetPixelFormat() const;
+    int GetW() const;
+    int GetH() const;
+    int GetPitch() const;
+    SDL_Texture *GetTexture() const;
+    uint32_t *GetPixels();
 
 private:
-    SDL_Texture *m_texObj;
-    int m_w, m_h;
-
-    std::shared_ptr<SDL_PixelFormat> m_format;
+    std::unique_ptr<SDL_Texture, SDL_Deleter> m_texture;
+    int m_w, m_h, m_pitch;
+    uint32_t *m_pixels;
 };
 
 // @details A resource manager that manages shareable and reusable textures. Responsibilities:
@@ -60,14 +60,14 @@ public:
     // @brief calls Shutdown() if users don't do that
     void Shutdown();
 
-    std::shared_ptr<TextureWrapper> Load(const std::string& filePath, SDL_Renderer *renderer);
+    std::shared_ptr<QTexture> Load(const std::string& filePath, SDL_Renderer *renderer);
     void Unload(const std::string& filePath);
 
     // @brief We can manually calls UnloadAll() to reuse again. Else, calls Shutdown()
     void UnloadAll();
 
 private:
-    std::unordered_map<std::string, std::shared_ptr<TextureWrapper>> loadedTexs;
+    std::unordered_map<std::string, std::shared_ptr<QTexture>> loadedTexs;
 
     // @brief 
     bool m_hasCalledUnloadAll;
