@@ -1,6 +1,4 @@
 #pragma once
-#include "SDL.h"
-
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -8,7 +6,6 @@
 #include "SDL_Deleter.h"
 
 // @brief A wrapper that handles texture data, using SDL_Texture
-// @note Do i need an IsEmpty() method, or handle that case in Release is better?
 class QTexture
 {
 public:
@@ -16,27 +13,15 @@ public:
     void LockTexture();
     void UnlockTexture();
 
-    // @brief Blit the texture to the rendering target
-    // @param clip is the width and height we take from texture to blit to the rendering target. If
-    // nullptr, take the width and height of the texture
-    // @param flip Should the texture be flipped horizontally/vertically or both?
-    // @remark Blit from (startX, startY) to (w, h) of clip
-    // @note Should i add angle, center in the future?
-    void Draw(SDL_Renderer *renderer, int startX, int startY,
-         SDL_Rect *clip, SDL_RendererFlip flip);
-
-    void RenderPixel(SDL_Renderer *renderer, int srcX, int srcY, int destX, int destY) const;
-
     int GetW() const;
     int GetH() const;
     int GetPitch() const;
-    SDL_Texture *GetTexture() const;
-    uint32_t *GetPixels();
+    const uint32_t *GetTexels() const;
 
 private:
     std::unique_ptr<SDL_Texture, SDL_Deleter> m_texture;
     int m_w, m_h, m_pitch;
-    uint32_t *m_pixels;
+    uint32_t *m_texels;
 };
 
 // @details A resource manager that manages shareable and reusable textures. Responsibilities:
@@ -53,23 +38,20 @@ class TextureManager
 {
 public:
     // @note Singleton pattern
-    TextureManager() = default;
     TextureManager(const TextureManager&) = delete;
     TextureManager& operator=(const TextureManager&) = delete;
+    static TextureManager& Instance();
     
-    // @brief calls Shutdown() if users don't do that
-    void Shutdown();
-
     std::shared_ptr<QTexture> Load(const std::string& filePath, SDL_Renderer *renderer);
     void Unload(const std::string& filePath);
 
-    // @brief We can manually calls UnloadAll() to reuse again. Else, calls Shutdown()
+    // @brief We can manually calls UnloadAll() to reuse again.
     void UnloadAll();
 
 private:
-    std::unordered_map<std::string, std::shared_ptr<QTexture>> loadedTexs;
+    TextureManager() = default;
 
-    // @brief 
-    bool m_hasCalledUnloadAll;
+private:
+    std::unordered_map<std::string, std::shared_ptr<QTexture>> loadedTexs;
 };
 

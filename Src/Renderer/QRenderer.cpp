@@ -1,3 +1,5 @@
+#include "SDL.h"
+
 #include <algorithm>
 #include <iostream>
 #include <string>
@@ -5,7 +7,7 @@
 #include <utility>
 
 #include "Renderer/QRenderer.h"
-#include "Renderer/IndexModel.h"
+#include "Renderer/Model.h"
 #include "Renderer/Texture.h"
 
 bool QRenderer::Init(SDL_Window *window, int w, int h)
@@ -34,19 +36,23 @@ bool QRenderer::Init(SDL_Window *window, int w, int h)
     return true;
 }
 
-void QRenderer::Render(const Model& model, const QTexture& texture, const std::vector<Vec3f>& colors, Mode drawMode)
+void QRenderer::Render(const Model& model, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode)
 {
-    SDL_RenderClear(m_renderer.get());
-    SDL_RenderCopyEx(m_renderer.get(), texture.GetTexture(), nullptr, nullptr, 0, nullptr, SDL_FLIP_NONE);
-    SDL_RenderPresent(m_renderer.get());
-#if 0
     m_rasterizer.Rasterize(m_pixels.data(), m_zBuffer.data(), m_w, m_h, model, m_projMat, colors);
+}
+
+void QRenderer::Render(QTexture *texture, const Model& model, Mode drawMode)
+{
+    m_rasterizer.Rasterize(m_pixels.data(), m_zBuffer.data(), texture, m_w, m_h, model, m_projMat);
+}
+
+void QRenderer::SwapBuffers()
+{
     SDL_UpdateTexture(m_bitmap.get(), nullptr, reinterpret_cast<const void*>(m_pixels.data()), m_w * 4);
     SDL_RenderCopyEx(m_renderer.get(), m_bitmap.get(), nullptr, nullptr, 0, nullptr, SDL_FLIP_VERTICAL);
     SDL_RenderPresent(m_renderer.get());
     std::fill(m_pixels.begin(), m_pixels.end(), 0);
     std::fill(m_zBuffer.begin(), m_zBuffer.end(), 0.0f);
-#endif
 }
 
 void QRenderer::SetProjectionMatrix(Mat44f m) { m_projMat = std::move(m); }
@@ -75,16 +81,8 @@ Mat44f QRenderer::LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up)
     return viewMat;
 }
 
-QTexture QRenderer::CreateTexture(const std::string& filePath)
+SDL_Renderer *QRenderer::GetRenderer()
 {
-    QTexture texture;
-    if (!m_renderer)
-    {
-        std::cerr << "Uh oh, renderer hasn't been initialized! Consider calling QRenderer::Init() first.\n";
-        return texture;
-    }
-
-    texture.Init(filePath, m_renderer.get());
-    return texture;
+    return m_renderer.get();
 }
 

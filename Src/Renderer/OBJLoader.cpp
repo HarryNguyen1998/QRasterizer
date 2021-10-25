@@ -3,7 +3,7 @@
 #include <sstream> // std::stringstream
 
 #include "Renderer/OBJLoader.h"
-#include "Renderer/IndexModel.h"
+#include "Renderer/Model.h"
 #include "Utils/Helper.h"
 
 namespace OBJ

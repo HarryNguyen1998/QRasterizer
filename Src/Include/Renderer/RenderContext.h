@@ -2,14 +2,7 @@
 #include "Math/Matrix.h"
 #include "Math/Vector.h"
 
-struct Model;
-class QTexture;
-struct SDL_Window;
-struct SDL_Renderer;
-struct SDL_Texture;
-struct SDL_PixelFormat;
-
-// @brief Provides methods to draw on bitmap
+// @todo Clean this up
 class RenderContext
 {
 public:
@@ -36,13 +29,5 @@ public:
 
     // @brief Gamma correct the color
     unsigned char DecodeGamma(float value);
-    
-    // @brief Draw Triangle method using a bitmap
-    // @remark v0 v1 v2 are assumed in CW order
-    void DrawTriangle(SDL_Renderer* renderer, const QTexture& bitmap, float* zBuffer, Vec3f v0, Vec3f v1, Vec3f v2,
-        Vec2f uv0, Vec2f uv1, Vec2f uv2, const QTexture& tex);
-
-    void DrawTriangles(SDL_Renderer* renderer, const QTexture& bitmap, float* zBuffer,
-        const Model& model, const QTexture& tex);
 
 };

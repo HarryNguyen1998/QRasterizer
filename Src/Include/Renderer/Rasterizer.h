@@ -5,12 +5,14 @@
 #include "Math/Matrix.h"
 
 struct Model;
+class QTexture;
 struct Triangle;
 
 class Rasterizer
 {
 public:
     void Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const Model& model, const Mat44f& projMat, const std::vector<Vec3f>& colors);
+    void Rasterize(uint32_t *pixels, float *zBuffer, QTexture *texture, int w, int h, const Model& model, const Mat44f& projMat);
 private:
     float ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
 
@@ -32,4 +34,16 @@ private:
     std::vector<Triangle> ClipTriangleAgainstPlane(Vec3f planeN, Vec3f planePt, const Triangle& inTri);
 
     Vec3f IntersectRayPlane(const Vec3f& p0, const Vec3f& p1, float planeD, const Vec3f& planeNormal, float *outT = nullptr);
+
+private:
+    // @note Maybe useful in the future but right now only necessary to clean up Clipping algorithm
+    struct Point
+    {
+        Vec3f pos;
+        Vec2f texCoord;
+        float wCoord;
+        Vec3f color;
+        Point(Vec3f inPos, Vec2f inTexCoord, float inWCoord = 1.0f, Vec3f inColor = Vec3f(0.0f)) :
+            pos{std::move(inPos)}, texCoord{std::move(inTexCoord)}, wCoord{inWCoord}, color{std::move(inColor)} {}
+    };
 };

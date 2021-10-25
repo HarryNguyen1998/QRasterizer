@@ -8,7 +8,7 @@
 #include "QApp.h"
 #include "Renderer/OBJLoader.h"
 #include "Renderer/QRenderer.h"
-#include "Renderer/IndexModel.h"
+#include "Renderer/Model.h"
 #include "Renderer/RenderContext.h"
 #include "Renderer/Texture.h"
 
@@ -18,7 +18,7 @@ QApp& QApp::Instance()
     return app;
 }
 
-bool QApp::Init(const std::string& title, int w, int h)
+bool QApp::Init(std::string title, int w, int h)
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
@@ -29,11 +29,11 @@ bool QApp::Init(const std::string& title, int w, int h)
     int imgFlags = IMG_INIT_JPG;
     if (!(IMG_Init(imgFlags) & imgFlags))
     {
-        std::cout << "SDL_image can't be initialized! SDL_image error: " << IMG_GetError();
+        std::cerr << "SDL_image can't be initialized! SDL_image error: " << IMG_GetError();
         return false;
     }
 
-    m_title = title;
+    m_title = std::move(title);
     m_w = w;
     m_h = h;
     m_window.reset(SDL_CreateWindow(
@@ -52,56 +52,128 @@ bool QApp::Init(const std::string& title, int w, int h)
 
 void QApp::Start()
 {
-#if 1
+    std::vector<Model> models;
+
+#ifdef MYDEBUG
+    {
+        std::vector<Vec3f> tri{
+            {-0.5f, -0.5f, 0.0f},
+            {0.0f, 0.5f, -0.5f},
+            {0.5f, -0.5f, 0.0f},
+        };
+        // Move to top left
+        Mat44f transMat = Math::InitTranslation(-1.5f, 1.0f, 0.0f);
+        for (int i = 0; i < tri.size(); ++i)
+            tri[i] = Math::MultiplyVecMat(tri[i], transMat);
+        std::vector<int> indices{
+            0, 2, 1
+        };
+        models.emplace_back(std::move(tri), std::move(indices));
+    }
+
+    {
+        std::vector<Vec3f> tri{
+            {-0.5f, 0.5f, 1.0f},
+            {0.5f, 0.5f, 0.0f},
+            {0.0f, -0.5f, -1.0f},
+        };
+        // Move to top right
+        Mat44f transMat = Math::InitTranslation(1.5f, 1.0f, 0.0f);
+        for (int i = 0; i < tri.size(); ++i)
+            tri[i] = Math::MultiplyVecMat(tri[i], transMat);
+        std::vector<int> indices{
+            0, 2, 1
+        };
+        std::vector<Vec2f> texCoords{
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {0.5f, 1.0f},
+        };
+        models.emplace_back(std::move(tri), indices, std::move(texCoords), indices);
+    }
+
+    {
+        std::vector<Vec3f> quad{
+            {-1.0f, -1.0f, 0.0f},
+            {-1.0f, 1.0f, 0.0f},
+            {1.0f, 1.0f, 0.0f},
+            {1.0f, -1.0f, 0.0f},
+        };
+        Mat44f transMat = Math::InitTranslation(-1.5f, -1.0f, 0.0f);
+        for (int i = 0; i < quad.size(); ++i)
+            quad[i] = Math::MultiplyVecMat(quad[i], transMat);
+        std::vector<int> indices{
+            0, 2, 1,
+            0, 3, 2,
+        };
+        std::vector<Vec2f> texCoords
+        {
+            {0.0f, 1.0f},
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {1.0f, 1.0f},
+        };
+        std::vector<int> texIndices
+        {
+            0, 2, 1,
+            0, 3, 2,
+        };
+        models.emplace_back(std::move(quad), std::move(indices), std::move(texCoords), std::move(texIndices));
+    }
+
+    {
+        std::vector<Vec3f> quad{
+            {-1.0f, 1.0f, 1.0f},
+            {-1.0f, 1.0f, -1.0f},
+            {1.0f, 1.0f, -1.0f},
+            {1.0f, 1.0f, 1.0f},
+        };
+        Mat44f transMat = Math::InitTranslation(1.5f, -2.0f, 0.0f);
+        for (int i = 0; i < quad.size(); ++i)
+            quad[i] = Math::MultiplyVecMat(quad[i], transMat);
+        std::vector<int> indices{
+            0, 2, 1,
+            0, 3, 2,
+        };
+        std::vector<Vec2f> texCoords
+        {
+            {0.0f, 1.0f},
+            {0.0f, 0.0f},
+            {1.0f, 0.0f},
+            {1.0f, 1.0f},
+        };
+        std::vector<int> texIndices
+        {
+            0, 2, 1,
+            0, 3, 2,
+        };
+        models.emplace_back(std::move(quad), std::move(indices), std::move(texCoords), std::move(texIndices));
+    }
+
     std::vector<Vec3f> colors{
-        {1.0f, 1.0f, 0.0f}, // yellow
-        {1.0f, 0.0f, 1.0f}, // purple
-        {0.0f, 1.0f, 1.0f}, // cyan
+        {1.0f, 0.0f, 0.0f}, // red
+        {0.0f, 1.0f, 0.0f}, // green
+        {0.0f, 0.0f, 1.0f}, // blue
     };
-    Model model{OBJ::LoadFileData("Assets/cube.obj")};
-    QTexture texture = m_qrenderer->CreateTexture("Assets/texture-test.jpg");
 #else
-#if 1
-    std::vector<Vec3f> tri{
-        {-0.9f, 0.9f, 1.0f},
-        {0.9f, 0.9f, -1.0f},
-        {0.0f, 0.0f, 0.0f},
-    };
-#endif
-#if 0
-    std::vector<Vec3f> tri{
-        {-0.5f, -0.5f, 0.0f},
-        {0.0f, 0.5f, 0.0f},
-        {0.5f, -0.5f, 0.0f},
-    };
-#endif
+    {
+        Model plane{OBJ::LoadFileData("Assets/plane.obj")};
+        Mat44f transMat = Math::InitTranslation(0.0f, -1.5f, 0.0f);
+        for (int i = 0; i < plane.verts.size(); ++i)
+            plane.verts[i] = Math::MultiplyVecMat(plane.verts[i], transMat);
+        models.push_back(std::move(plane));
+    }
 
-    // CCW
-    std::vector<int> indices{
-        0, 2, 1
-    };
-    std::vector<Vec3f> colors{
-        {1.0f, 0.0f, 0.0f},
-        {0.0f, 1.0f, 0.0f},
-        {0.0f, 0.0f, 1.0f},
-    };
-    Model model{tri, indices};
-#endif
+    {
+        Model suzanne{OBJ::LoadFileData("Assets/suzanne.obj")};
+        models.push_back(std::move(suzanne));
+    }
 
-#if 0
-    // @todo Ideally:
-    std::vector<Vec2f> texCoords{
-        {1.0f, 0.0f},
-        {0.0f, 1.0f},
-    };
-    std::vector<Vec3f> normals{
-        {...},
-        {...},
-        {...},
-    };
-    // Simply don't use if texCoords or normals are empty, else error since verts are empty.
-    IndexModel model{std::move(tri), std::move(texCoords), std::move(normals)};
-    m_renderer.Render(model, colors, Renderer::Mode::kDrawLine);
+    {
+        Model cube{OBJ::LoadFileData("Assets/cube.obj")};
+        models.push_back(std::move(cube));
+    }
+
 #endif
 
     // For deltatime
@@ -110,8 +182,9 @@ void QApp::Start()
     float accumulatedTime = 0.0;
     int frameCnt = 0;
 
+    TextureManager& textureManager = TextureManager::Instance();
 
-    Vec3f eye{0.0f, 0.0f, 4.0f};
+    Vec3f eye{0.0f, 0.0f, 3.0f};
 
     // Main loop
     const uint8_t *isKeyHeldDown = SDL_GetKeyboardState(nullptr);
@@ -186,18 +259,63 @@ void QApp::Start()
         Vec3f at = Math::MultiplyVecMat(lookDir, leftOrRightMat);
         at += eye;
         Mat44f viewMat = m_qrenderer->LookAt(eye, at);
-        Model changedModel = model;
-        //Mat44f rotMat = Math::InitRotation(0.0f, 0.0f, 0.0f);
-        for (int i = 0; i < changedModel.verts.size(); ++i)
+
+        std::vector<Model> changedModels = models;
+        rotAmount += 1.0f * dt;
+        Mat44f rotMonkeyMat = Math::InitRotation(rotAmount, rotAmount, 0.0f);
+        Mat44f rotCubeMat = Math::InitRotation(-rotAmount, rotAmount, 0.0f);
+        Mat44f moveMonkeyMat = Math::InitTranslation(1.5f, 0.0f, 0.0f);
+        Mat44f moveCubeMat = Math::InitTranslation(-1.5f, 0.0f, 0.0f);
+        for (int modelIndex = 0; modelIndex < changedModels.size(); ++modelIndex)
         {
-            //changedModel.verts[i] = Math::MultiplyVecMat(changedModel.verts[i], rotMat);
-            changedModel.verts[i] = Math::MultiplyVecMat(changedModel.verts[i], viewMat);
+            for (int vertIndex = 0; vertIndex < changedModels[modelIndex].verts.size(); ++vertIndex)
+            {
+                // Move monkey to right, cube to left
+                if (modelIndex == 1)
+                {
+                    changedModels[modelIndex].verts[vertIndex] =
+                        Math::MultiplyVecMat(changedModels[modelIndex].verts[vertIndex], rotMonkeyMat * moveMonkeyMat);
+                }
+                if (modelIndex == 2)
+                {
+                    changedModels[modelIndex].verts[vertIndex] =
+                        Math::MultiplyVecMat(changedModels[modelIndex].verts[vertIndex], rotCubeMat * moveCubeMat);
+                }
+                
+                changedModels[modelIndex].verts[vertIndex] =
+                    Math::MultiplyVecMat(changedModels[modelIndex].verts[vertIndex], viewMat);
+            }
+
         }
 
         
         // Rendering
         QRenderer::Mode drawMode = QRenderer::Mode::kNone;
-        m_qrenderer->Render(changedModel, texture, colors, drawMode);
+        // Render triangle using color
+#ifdef MYDEBUG
+        m_qrenderer->Render(changedModels[0], colors, drawMode);
+        // Render triangle using texture
+        m_qrenderer->Render(textureManager.Load("Assets/checkerboard.jpg", m_qrenderer->GetRenderer()).get(),
+            changedModels[1], drawMode);
+        // Render quads using texture
+        m_qrenderer->Render(textureManager.Load("Assets/bricks.jpg", m_qrenderer->GetRenderer()).get(),
+            changedModels[2], drawMode);
+        m_qrenderer->Render(textureManager.Load("Assets/bricks2.jpg", m_qrenderer->GetRenderer()).get(),
+            changedModels[3], drawMode);
+#else
+        // Render plane
+        m_qrenderer->Render(textureManager.Load("Assets/wood.jpg", m_qrenderer->GetRenderer()).get(),
+            changedModels[0], drawMode);
+        // Render monkey
+        m_qrenderer->Render(textureManager.Load("Assets/bricks2.jpg", m_qrenderer->GetRenderer()).get(),
+            changedModels[1], drawMode);
+        // Render cube
+        m_qrenderer->Render(textureManager.Load("Assets/bricks.jpg", m_qrenderer->GetRenderer()).get(),
+            changedModels[2], drawMode);
+#endif
+
+        m_qrenderer->SwapBuffers();
+        
 
         // Frame statistics every 2s
         ++frameCnt;

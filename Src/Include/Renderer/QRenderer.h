@@ -27,7 +27,9 @@ public:
 public:
     bool Init(SDL_Window *window, int w, int h);
 
-    void Render(const Model& model, const QTexture& texture, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode);
+    void Render(const Model& model, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode);
+    void Render(QTexture *texture, const Model& model, QRenderer::Mode drawMode);
+    void SwapBuffers();
 
     // @brief Move the projection matrix from caller 
     void SetProjectionMatrix(Mat44f m);
@@ -35,9 +37,7 @@ public:
     // @brief Construct a view matrix.
     Mat44f LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up = Vec3f{0.0f, 1.0f, 0.0f});
 
-    // @brief Create texture from filepath.
-    // @return If renderer hasn't been initialized, return an empty texture
-    QTexture CreateTexture(const std::string& filePath);
+    SDL_Renderer *GetRenderer();
 
 private:
     // @brief Information about rendering that is only used for the window

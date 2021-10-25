@@ -5,26 +5,24 @@
 #include "SDL_Deleter.h"
 
 // Forward declarations
-struct SDL_KeyboardEvent;
 class QRenderer;
-class TextureManager;
 
-// @brief a Sort-of controller that handles "when" to init/shutdown its members, main loop
 class QApp
 {
 public:
     // @note Singleton pattern
-    QApp() = default;
     QApp(const QApp&) = delete;
     QApp& operator=(const QApp&) = delete;
     static QApp& Instance();
     
-    bool Init(const std::string& title, int w, int h);
+    bool Init(std::string title, int w, int h);
     void Start();
     void Shutdown();
 
     void ShowFrameStatistics(int frameCnt, float dt);
 
+private:
+    QApp() = default;
 private:
     bool m_isPaused;
 
