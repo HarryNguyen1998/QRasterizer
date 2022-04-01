@@ -30,21 +30,22 @@ bool QRenderer::Init(SDL_Window *window, int w, int h)
         return false;
     }
 
-    m_pixels = std::vector<uint32_t>(m_w * m_h, 0);
+    m_pixels = std::vector<uint32_t>(m_w * m_h, 50);
     m_zBuffer = std::vector<float>(m_w * m_h, 0.0f);
 
     return true;
 }
 
-void QRenderer::Render(const Model& model, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode)
+void QRenderer::Render(const Model& model, QRendererMode drawMode)
 {
-    m_rasterizer.Rasterize(m_pixels.data(), m_zBuffer.data(), m_w, m_h, model, m_projMat, colors);
+    m_rasterizer.Rasterize(m_pixels.data(), m_zBuffer.data(), m_w, m_h, model, m_projMat, drawMode);
 }
 
-void QRenderer::Render(QTexture *texture, const Model& model, Mode drawMode)
+void QRenderer::Render(const Model& model, std::shared_ptr<QTexture> texture, QRendererMode drawMode)
 {
-    m_rasterizer.Rasterize(m_pixels.data(), m_zBuffer.data(), texture, m_w, m_h, model, m_projMat);
+    m_rasterizer.Rasterize(m_pixels.data(), m_zBuffer.data(), texture.get(), m_w, m_h, model, m_projMat, drawMode);
 }
+
 
 void QRenderer::SwapBuffers()
 {

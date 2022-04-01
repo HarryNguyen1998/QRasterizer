@@ -22,6 +22,8 @@ set(QRasterizer_SOURCES
 # Copy Assets folder to build folder
 add_executable(QRasterizer Main.cpp ${QRasterizer_SOURCES})
 
+add_executable(TestRasterizer Examples/TestRasterizer.cpp ${QRasterizer_SOURCES})
+
 # Test folder
 add_subdirectory(External/Catch2)
 add_subdirectory(Test)
@@ -37,6 +39,7 @@ add_custom_command(TARGET QRasterizer POST_BUILD
         "${SDL2_LIB_DIRS}/SDL2.dll"                
         $<TARGET_FILE_DIR:QRasterizer>)            
 target_link_libraries(QRasterizer ${SDL2_LIBRARIES})
+target_link_libraries(TestRasterizer ${SDL2_LIBRARIES})
 
 # Load JPG files.
 add_custom_command(TARGET QRasterizer POST_BUILD
@@ -49,5 +52,6 @@ add_custom_command(TARGET QRasterizer POST_BUILD
         "${SDL2_IMG_LIB_DIRS}/libjpeg-9.dll"                
         $<TARGET_FILE_DIR:QRasterizer>)            
 target_link_libraries(QRasterizer ${SDL2_IMG_LIBRARIES})
+target_link_libraries(TestRasterizer ${SDL2_IMG_LIBRARIES})
 
 

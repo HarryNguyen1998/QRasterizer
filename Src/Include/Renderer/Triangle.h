@@ -1,6 +1,7 @@
 #pragma once
 
 // @brief All the vert attributes are already in order (CW)
+// Useful from clip space to NDC space
 struct Triangle
 {
     Vec3f verts[3];

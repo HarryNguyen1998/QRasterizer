@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,22 +14,21 @@
 struct Model;
 class QTexture;
 
+enum class QRendererMode
+{
+    kNone,
+    kWireframe,
+    kZBuffer,
+};
+
 // @brief Controls the window
 class QRenderer
 {
 public:
-    enum class Mode
-    {
-        kNone,
-        kDrawLine,
-        kWireframe,
-        kZBuffer,
-    };
-public:
     bool Init(SDL_Window *window, int w, int h);
 
-    void Render(const Model& model, const std::vector<Vec3f>& colors, QRenderer::Mode drawMode);
-    void Render(QTexture *texture, const Model& model, QRenderer::Mode drawMode);
+    void Render(const Model& model, QRendererMode drawMode);
+    void Render(const Model& model, std::shared_ptr<QTexture> texture, QRendererMode drawMode);
     void SwapBuffers();
 
     // @brief Move the projection matrix from caller 

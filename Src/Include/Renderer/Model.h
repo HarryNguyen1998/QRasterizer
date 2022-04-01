@@ -3,14 +3,21 @@
 
 #include "Math/Vector.h"
 
-// @brief A way to save space by using an index buffer to reuse verts.
+enum class InputWindingOrder
+{
+    kCW,
+    kCCW,
+};
+
+
 // @param indices An index buffer where 3 successive elements are 3 vertices from verts that make up
-// a tri.
+// a tri. This is used to save space
+// @note We impose a CW winding order, so if input data is CCW, it will change to CW order
 struct Model
 {
     std::vector<Vec3f> verts;
+    std::vector<Vec3f> colors;
     std::vector<Vec2f> texCoords;
-    // @todo If normals aren't provide, build the face normals, and update them when obj is transformed.
     std::vector<Vec3f> normals;
 
     std::vector<int> vertIndices;
@@ -18,9 +25,9 @@ struct Model
     std::vector<int> nIndices;
 
     Model() = default;
-    Model(std::vector<Vec3f> inVerts, std::vector<int> inVertIndices,
+    Model(InputWindingOrder mode,
+        std::vector<Vec3f> inVerts, std::vector<Vec3f> inColors, std::vector<int> inVertIndices,
         std::vector<Vec2f> inTexCoords = {}, std::vector<int> inUVIndices = {},
         std::vector<Vec3f> inNormals = {}, std::vector<int> inNIndices = {});
 
-    void CalculateNormal();
 };

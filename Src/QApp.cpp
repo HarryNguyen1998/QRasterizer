@@ -2,6 +2,7 @@
 #include "SDL_image.h"
 
 #include <cassert>
+#include <memory>
 #include <string>
 #include <sstream>
 
@@ -52,129 +53,32 @@ bool QApp::Init(std::string title, int w, int h)
 
 void QApp::Start()
 {
+    // Inputs
+    TextureManager& textureManager = TextureManager::Instance();
     std::vector<Model> models;
+    std::vector<std::shared_ptr<QTexture>> textures;
 
-#ifdef MYDEBUG
-    {
-        std::vector<Vec3f> tri{
-            {-0.5f, -0.5f, 0.0f},
-            {0.0f, 0.5f, -0.5f},
-            {0.5f, -0.5f, 0.0f},
-        };
-        // Move to top left
-        Mat44f transMat = Math::InitTranslation(-1.5f, 1.0f, 0.0f);
-        for (int i = 0; i < tri.size(); ++i)
-            tri[i] = Math::MultiplyVecMat(tri[i], transMat);
-        std::vector<int> indices{
-            0, 2, 1
-        };
-        models.emplace_back(std::move(tri), std::move(indices));
-    }
-
-    {
-        std::vector<Vec3f> tri{
-            {-0.5f, 0.5f, 1.0f},
-            {0.5f, 0.5f, 0.0f},
-            {0.0f, -0.5f, -1.0f},
-        };
-        // Move to top right
-        Mat44f transMat = Math::InitTranslation(1.5f, 1.0f, 0.0f);
-        for (int i = 0; i < tri.size(); ++i)
-            tri[i] = Math::MultiplyVecMat(tri[i], transMat);
-        std::vector<int> indices{
-            0, 2, 1
-        };
-        std::vector<Vec2f> texCoords{
-            {0.0f, 0.0f},
-            {1.0f, 0.0f},
-            {0.5f, 1.0f},
-        };
-        models.emplace_back(std::move(tri), indices, std::move(texCoords), indices);
-    }
-
-    {
-        std::vector<Vec3f> quad{
-            {-1.0f, -1.0f, 0.0f},
-            {-1.0f, 1.0f, 0.0f},
-            {1.0f, 1.0f, 0.0f},
-            {1.0f, -1.0f, 0.0f},
-        };
-        Mat44f transMat = Math::InitTranslation(-1.5f, -1.0f, 0.0f);
-        for (int i = 0; i < quad.size(); ++i)
-            quad[i] = Math::MultiplyVecMat(quad[i], transMat);
-        std::vector<int> indices{
-            0, 2, 1,
-            0, 3, 2,
-        };
-        std::vector<Vec2f> texCoords
-        {
-            {0.0f, 1.0f},
-            {0.0f, 0.0f},
-            {1.0f, 0.0f},
-            {1.0f, 1.0f},
-        };
-        std::vector<int> texIndices
-        {
-            0, 2, 1,
-            0, 3, 2,
-        };
-        models.emplace_back(std::move(quad), std::move(indices), std::move(texCoords), std::move(texIndices));
-    }
-
-    {
-        std::vector<Vec3f> quad{
-            {-1.0f, 1.0f, 1.0f},
-            {-1.0f, 1.0f, -1.0f},
-            {1.0f, 1.0f, -1.0f},
-            {1.0f, 1.0f, 1.0f},
-        };
-        Mat44f transMat = Math::InitTranslation(1.5f, -2.0f, 0.0f);
-        for (int i = 0; i < quad.size(); ++i)
-            quad[i] = Math::MultiplyVecMat(quad[i], transMat);
-        std::vector<int> indices{
-            0, 2, 1,
-            0, 3, 2,
-        };
-        std::vector<Vec2f> texCoords
-        {
-            {0.0f, 1.0f},
-            {0.0f, 0.0f},
-            {1.0f, 0.0f},
-            {1.0f, 1.0f},
-        };
-        std::vector<int> texIndices
-        {
-            0, 2, 1,
-            0, 3, 2,
-        };
-        models.emplace_back(std::move(quad), std::move(indices), std::move(texCoords), std::move(texIndices));
-    }
-
-    std::vector<Vec3f> colors{
-        {1.0f, 0.0f, 0.0f}, // red
-        {0.0f, 1.0f, 0.0f}, // green
-        {0.0f, 0.0f, 1.0f}, // blue
-    };
-#else
     {
         Model plane{OBJ::LoadFileData("Assets/plane.obj")};
         Mat44f transMat = Math::InitTranslation(0.0f, -1.5f, 0.0f);
         for (int i = 0; i < plane.verts.size(); ++i)
             plane.verts[i] = Math::MultiplyVecMat(plane.verts[i], transMat);
         models.push_back(std::move(plane));
+        textures.push_back(textureManager.Load("Assets/wood.jpg", m_qrenderer->GetRenderer()));
     }
 
     {
         Model suzanne{OBJ::LoadFileData("Assets/suzanne.obj")};
         models.push_back(std::move(suzanne));
+        textures.push_back(textureManager.Load("Assets/bricks2.jpg", m_qrenderer->GetRenderer()));
     }
 
     {
         Model cube{OBJ::LoadFileData("Assets/cube.obj")};
         models.push_back(std::move(cube));
+        textures.push_back(textureManager.Load("Assets/bricks.jpg", m_qrenderer->GetRenderer()));
     }
 
-#endif
 
     // For deltatime
     const float secsPerCnt = 1.0f / SDL_GetPerformanceFrequency();
@@ -182,8 +86,7 @@ void QApp::Start()
     float accumulatedTime = 0.0;
     int frameCnt = 0;
 
-    TextureManager& textureManager = TextureManager::Instance();
-
+    // Setup
     Vec3f eye{0.0f, 0.0f, 3.0f};
 
     // Main loop
@@ -290,29 +193,10 @@ void QApp::Start()
 
         
         // Rendering
-        QRenderer::Mode drawMode = QRenderer::Mode::kNone;
-        // Render triangle using color
-#ifdef MYDEBUG
-        m_qrenderer->Render(changedModels[0], colors, drawMode);
-        // Render triangle using texture
-        m_qrenderer->Render(textureManager.Load("Assets/checkerboard.jpg", m_qrenderer->GetRenderer()).get(),
-            changedModels[1], drawMode);
-        // Render quads using texture
-        m_qrenderer->Render(textureManager.Load("Assets/bricks.jpg", m_qrenderer->GetRenderer()).get(),
-            changedModels[2], drawMode);
-        m_qrenderer->Render(textureManager.Load("Assets/bricks2.jpg", m_qrenderer->GetRenderer()).get(),
-            changedModels[3], drawMode);
-#else
-        // Render plane
-        m_qrenderer->Render(textureManager.Load("Assets/wood.jpg", m_qrenderer->GetRenderer()).get(),
-            changedModels[0], drawMode);
-        // Render monkey
-        m_qrenderer->Render(textureManager.Load("Assets/bricks2.jpg", m_qrenderer->GetRenderer()).get(),
-            changedModels[1], drawMode);
-        // Render cube
-        m_qrenderer->Render(textureManager.Load("Assets/bricks.jpg", m_qrenderer->GetRenderer()).get(),
-            changedModels[2], drawMode);
-#endif
+        for (int i = 0; i < changedModels.size(); ++i)
+        {
+            m_qrenderer->Render(changedModels[i], textures[i], QRendererMode::kNone);
+        }
 
         m_qrenderer->SwapBuffers();
         

@@ -7,12 +7,13 @@
 struct Model;
 class QTexture;
 struct Triangle;
+enum class QRendererMode;
 
 class Rasterizer
 {
 public:
-    void Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const Model& model, const Mat44f& projMat, const std::vector<Vec3f>& colors);
-    void Rasterize(uint32_t *pixels, float *zBuffer, QTexture *texture, int w, int h, const Model& model, const Mat44f& projMat);
+    void Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const Model& model, const Mat44f& projMat, QRendererMode mode);
+    void Rasterize(uint32_t *pixels, float *zBuffer, QTexture *texture, int w, int h, const Model& model, const Mat44f& projMat, QRendererMode mode);
 private:
     float ComputeEdge(const Vec3f& a, const Vec3f& b, const Vec3f& c);
 
@@ -46,4 +47,5 @@ private:
         Point(Vec3f inPos, Vec2f inTexCoord, float inWCoord = 1.0f, Vec3f inColor = Vec3f(0.0f)) :
             pos{std::move(inPos)}, texCoord{std::move(inTexCoord)}, wCoord{inWCoord}, color{std::move(inColor)} {}
     };
+
 };

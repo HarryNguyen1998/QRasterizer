@@ -1,7 +1,11 @@
 # QRasterizer
-A simple rasterizer for me to understand how a rendering API (OpenGL, DirectX) roughly works under the hood.
+A rasterizer for me to understand how a rendering API (OpenGL, DirectX) roughly works under the hood.
 
-![](images/example_release_mode.png)
+<table><tr>
+<td> <img src="images/wireframe.png" alt="Drawing" style="width: 250px;"/> </td>
+<td> <img src="images/z-buffer.png" alt="Drawing" style="width: 250px;"/> </td>
+<td> <img src="images/texture-mapping.png" alt="Drawing" style="width: 250px;"/> </td>
+</tr></table>
 
 ---
 
