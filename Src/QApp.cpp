@@ -10,7 +10,6 @@
 #include "Renderer/OBJLoader.h"
 #include "Renderer/QRenderer.h"
 #include "Renderer/Model.h"
-#include "Renderer/RenderContext.h"
 #include "Renderer/Texture.h"
 
 QApp& QApp::Instance()
@@ -51,36 +50,28 @@ bool QApp::Init(std::string title, int w, int h)
     return true;
 }
 
+void QApp::LoadModel(Model model)
+{
+    m_models.push_back(std::move(model));
+}
+
+void QApp::LoadTexture(const std::string& textureFilePath)
+{
+    assert(!m_models.empty() && "Load model first.");
+    m_textures.push_back(TextureManager::Instance().Load(textureFilePath, m_qrenderer->GetRenderer()));
+    m_modelToTextureIndex.insert(std::make_pair((int)m_models.size() - 1, (int)m_textures.size() - 1));
+}
+
+void QApp::SetDrawMode(QRendererMode drawMode)
+{
+    m_drawMode = drawMode;
+}
+
 void QApp::Start()
 {
-    // Inputs
-    TextureManager& textureManager = TextureManager::Instance();
-    std::vector<Model> models;
-    std::vector<std::shared_ptr<QTexture>> textures;
+    assert(!m_models.empty() && "models is empty.");
 
-    {
-        Model plane{OBJ::LoadFileData("Assets/plane.obj")};
-        Mat44f transMat = Math::InitTranslation(0.0f, -1.5f, 0.0f);
-        for (int i = 0; i < plane.verts.size(); ++i)
-            plane.verts[i] = Math::MultiplyVecMat(plane.verts[i], transMat);
-        models.push_back(std::move(plane));
-        textures.push_back(textureManager.Load("Assets/wood.jpg", m_qrenderer->GetRenderer()));
-    }
-
-    {
-        Model suzanne{OBJ::LoadFileData("Assets/suzanne.obj")};
-        models.push_back(std::move(suzanne));
-        textures.push_back(textureManager.Load("Assets/bricks2.jpg", m_qrenderer->GetRenderer()));
-    }
-
-    {
-        Model cube{OBJ::LoadFileData("Assets/cube.obj")};
-        models.push_back(std::move(cube));
-        textures.push_back(textureManager.Load("Assets/bricks.jpg", m_qrenderer->GetRenderer()));
-    }
-
-
-    // For deltatime
+    // deltatime
     const float secsPerCnt = 1.0f / SDL_GetPerformanceFrequency();
     uint64_t startCounts = SDL_GetPerformanceCounter();
     float accumulatedTime = 0.0;
@@ -163,9 +154,9 @@ void QApp::Start()
         at += eye;
         Mat44f viewMat = m_qrenderer->LookAt(eye, at);
 
-        std::vector<Model> changedModels = models;
-        rotAmount += 1.0f * dt;
-        Mat44f rotMonkeyMat = Math::InitRotation(rotAmount, rotAmount, 0.0f);
+        std::vector<Model> changedModels = m_models;
+        rotAmount += 0.45f * dt;
+        Mat44f rotMonkeyMat = Math::InitRotation(0, 0.0f, rotAmount);
         Mat44f rotCubeMat = Math::InitRotation(-rotAmount, rotAmount, 0.0f);
         Mat44f moveMonkeyMat = Math::InitTranslation(1.5f, 0.0f, 0.0f);
         Mat44f moveCubeMat = Math::InitTranslation(-1.5f, 0.0f, 0.0f);
@@ -174,10 +165,10 @@ void QApp::Start()
             for (int vertIndex = 0; vertIndex < changedModels[modelIndex].verts.size(); ++vertIndex)
             {
                 // Move monkey to right, cube to left
-                if (modelIndex == 1)
+                if (modelIndex == 0)
                 {
                     changedModels[modelIndex].verts[vertIndex] =
-                        Math::MultiplyVecMat(changedModels[modelIndex].verts[vertIndex], rotMonkeyMat * moveMonkeyMat);
+                        Math::MultiplyVecMat(changedModels[modelIndex].verts[vertIndex], rotMonkeyMat);
                 }
                 if (modelIndex == 2)
                 {
@@ -195,7 +186,13 @@ void QApp::Start()
         // Rendering
         for (int i = 0; i < changedModels.size(); ++i)
         {
-            m_qrenderer->Render(changedModels[i], textures[i], QRendererMode::kNone);
+            auto it = m_modelToTextureIndex.find(i);
+            // If found texture, draw with texture, else draw with color
+            if (it != m_modelToTextureIndex.end())
+                m_qrenderer->Render(changedModels[i], m_textures[it->second], m_drawMode);
+            else
+                m_qrenderer->Render(changedModels[i], m_drawMode);
+
         }
 
         m_qrenderer->SwapBuffers();

@@ -335,9 +335,9 @@ namespace Math
         result(0, 0) = 1.0f / (tan(fovY / 2) * aspectRatio);
         result(1, 1) = 1.0f / tan(fovY / 2);
 
-        result(2, 2) = -f / (f - n);
+        result(2, 2) = f / (n - f);
         result(2, 3) = -1.0f;
-        result(3, 2) = -f * n / (f - n);
+        result(3, 2) = f * n / (n - f);
         return result;
     }
 

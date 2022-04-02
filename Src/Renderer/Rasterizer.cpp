@@ -9,7 +9,7 @@
 #include "Renderer/Texture.h"
 #include "Renderer/Triangle.h"
 
-Vec3f color;
+Vec3f debugColor;
 
 void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const Model& model, const Mat44f& projMat, QRendererMode mode)
 {
@@ -20,9 +20,21 @@ void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const
         Vec3f v0 = model.verts[model.vertIndices[i]];
         Vec3f v1 = model.verts[model.vertIndices[i + 1]];
         Vec3f v2 = model.verts[model.vertIndices[i + 2]];
-        Vec3f c0 = model.colors[i];
-        Vec3f c1 = model.colors[i + 1];
-        Vec3f c2 = model.colors[i + 2];
+        // Empty, resolve to flat shading
+        Vec3f c0, c1, c2;
+        if (model.colors.empty())
+        {
+            c0 = Vec3f{1.0f, 1.0f, 1.0f};
+            c1 = Vec3f{1.0f, 1.0f, 1.0f};
+            c2 = Vec3f{1.0f, 1.0f, 1.0f};
+        }
+        else
+        {
+            c0 = model.colors[model.vertIndices[i]];
+            c1 = model.colors[model.vertIndices[i + 1]];
+            c2 = model.colors[model.vertIndices[i + 2]];
+        }
+
 
         // Back face culling in cam space
         Vec3f surfNormal = Math::Normal(Math::Cross(v2 - v0, v1 - v0));
@@ -100,176 +112,7 @@ void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const
             }   // End while
 
         }
-    
-        for (int j = 0; j < clippedTris.size(); ++j)
-        {
-            // Perspective divide to NDC space
-            v0 = clippedTris[j].verts[0] / clippedTris[j].wCoords[0];
-            v1 = clippedTris[j].verts[1] / clippedTris[j].wCoords[1];
-            v2 = clippedTris[j].verts[2] / clippedTris[j].wCoords[2];
-            c0 = clippedTris[j].colors[0];
-            c1 = clippedTris[j].colors[1];
-            c2 = clippedTris[j].colors[2];
 
-            // To raster space
-            v0.x = (v0.x + 1.0f) * w / 2;
-            v0.y = (v0.y + 1.0f) * h / 2;
-            v1.x = (v1.x + 1.0f) * w / 2;
-            v1.y = (v1.y + 1.0f) * h / 2;
-            v2.x = (v2.x + 1.0f) * w / 2;
-            v2.y = (v2.y + 1.0f) * h / 2;
-            float oneOverW0 = 1.0f / clippedTris[j].wCoords[0];
-            float oneOverW1 = 1.0f / clippedTris[j].wCoords[1];
-            float oneOverW2 = 1.0f / clippedTris[j].wCoords[2];
-
-            float areaOfParallelogram = ComputeEdge(v0, v1, v2);
-            if (Helper::IsEqual(areaOfParallelogram, 0.0f))
-                continue;
-            int bbMinX = (int)Helper::Min3(v0.x, v1.x, v2.x);
-            int bbMaxX = (int)Helper::Max3(v0.x, v1.x, v2.x);
-            int bbMinY = (int)Helper::Min3(v0.y, v1.y, v2.y);
-            int bbMaxY = (int)Helper::Max3(v0.y, v1.y, v2.y);
-
-            bbMinX = std::max(0, bbMinX);
-            bbMinY = std::max(0, bbMinY);
-            bbMaxX = std::min(w - 1, bbMaxX);
-            bbMaxY = std::min(h - 1, bbMaxY);
-
-            for (int y = bbMinY; y <= bbMaxY; ++y)
-            {
-                for (int x = bbMinX; x <= bbMaxX; ++x)
-                {
-                    Vec3f pt{(float)x, (float)y, 0.0f};
-
-                    // Inside-outside test
-                    float e12 = ComputeEdge(v1, v2, pt);
-                    float e20 = ComputeEdge(v2, v0, pt);
-                    float e01 = ComputeEdge(v0, v1, pt);
-                    if (e01 < 0.0f || e12 < 0.0f || e20 < 0.0f)
-                        continue;
-
-                    assert(!Helper::IsEqual(areaOfParallelogram, 0.0f));
-                    float t0 = e12 / areaOfParallelogram;
-                    float t1 = e20 / areaOfParallelogram;
-                    float t2 = e01 / areaOfParallelogram;
-                    float oneOverW = t0 * oneOverW0 + t1 * oneOverW1 + t2 * oneOverW2;
-                    color = (1.0f / oneOverW) * (c0 * oneOverW0 * t0 + c1 * oneOverW1 * t1 + c2 * oneOverW2 * t2);
-
-                    uint8_t r = ClampChannel(color.r);
-                    uint8_t g = ClampChannel(color.g);
-                    uint8_t b = ClampChannel(color.b);
-
-                    // @note If z < zBuffer, the triangle is closer, and update new zBuffer.
-                    // Instead, since we use oneOverZ, it's actually inverse, and zBuffer filled
-                    // with 0 actually represent the furthest (infinitely)
-                    if (oneOverW > zBuffer[x + y * w])
-                    {
-                        if (mode == QRendererMode::kZBuffer)
-                        {
-                            uint8_t c = ClampChannel(oneOverW);
-                            pixels[x + y * w] = ToColor(c, c, c, 255);
-                            zBuffer[x + y * w] = oneOverW;
-                        }
-                        else
-                        {
-                            pixels[x + y * w] = ToColor(r, g, b, 255);
-                            zBuffer[x + y * w] = oneOverW;
-                        }
-                    }
-                }
-            }
-        }   // End of insidePts
-
-    }   // End of vertIndices
-
-    assert(!model.verts.empty() && "Uh oh, model is empty!");
-
-    for (int i = 0; i < model.vertIndices.size(); i += 3)
-    {
-        Vec3f v0 = model.verts[model.vertIndices[i]];
-        Vec3f v1 = model.verts[model.vertIndices[i + 1]];
-        Vec3f v2 = model.verts[model.vertIndices[i + 2]];
-        Vec3f c0 = model.colors[i];
-        Vec3f c1 = model.colors[i + 1];
-        Vec3f c2 = model.colors[i + 2];
-
-        // Back face culling in cam space
-        Vec3f surfNormal = Math::Normal(Math::Cross(v2 - v0, v1 - v0));
-        if (Math::Dot(v0, surfNormal) > 0.0f)
-            continue;
-
-        // Flat shading. @note z-axis isn't inverted here
-        Vec3f lightDir = Math::Normal(Vec3f{0.0f, -1.0f, -1.0f});
-        // @note Since it survives back face culling, surfNormal should be (+)
-        float dp = Math::Dot(lightDir, surfNormal);
-        c0 *= -dp;
-        c1 *= -dp;
-        c2 *= -dp;
-
-        // To clip space. @note z-axis is inverted here to range [0, w];
-        std::vector<float> wCoords = {-v0.z, -v1.z, -v2.z};
-        v0 = Math::MultiplyVecMat(v0, projMat);
-        v1 = Math::MultiplyVecMat(v1, projMat);
-        v2 = Math::MultiplyVecMat(v2, projMat);
-
-        // Clipping
-        enum Plane
-        {
-            kNear,
-            kTop,
-            kRight,
-            kBottom,
-            kLeft,
-            kCount
-        };
-        std::deque<Triangle> clippedTris;
-        // No uv, so set to 0
-        clippedTris.push_back(Triangle(v0, v1, v2, Vec2f(0.0f), Vec2f(0.0f), Vec2f(0.0f),
-            wCoords[0], wCoords[1], wCoords[2], c0, c1, c2));
-        for (int p = Plane::kNear; p != Plane::kCount; ++p)
-        {
-            size_t oldCnt = clippedTris.size();
-            while (oldCnt-- > 0)
-            {
-                Triangle tri = clippedTris.front();
-                clippedTris.pop_front();
-                std::vector<Triangle> newTris;
-                switch (p)
-                {
-                case Plane::kNear:
-                {
-                    newTris = ClipTriangleAgainstPlane({0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.5f}, tri);
-                    break;
-                }
-                case Plane::kTop:
-                {
-                    newTris = ClipTriangleAgainstPlane({0.0f, -1.0f, 1.0f}, Vec3f(0.0f), tri);
-                    break;
-                }
-                case Plane::kRight:
-                {
-                    newTris = ClipTriangleAgainstPlane({-1.0f, 0.0f, 1.0f}, Vec3f(0.0f), tri);
-                    break;
-                }
-                case Plane::kBottom:
-                {
-                    newTris = ClipTriangleAgainstPlane({0.0f, 1.0f, 1.0f}, Vec3f(0.0f), tri);
-                    break;
-                }
-                case Plane::kLeft:
-                {
-                    newTris = ClipTriangleAgainstPlane({1.0f, 0.0f, 1.0f}, Vec3f(0.0f), tri);
-                    break;
-                }
-                }   // End switch
-
-                for (auto &newTri : newTris)
-                    clippedTris.push_back(std::move(newTri));
-
-            }   // End while
-
-        }
-    
         for (int j = 0; j < clippedTris.size(); ++j)
         {
             // Perspective divide to NDC space
@@ -331,7 +174,7 @@ void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const
                         float t1 = e20 / areaOfParallelogram;
                         float t2 = e01 / areaOfParallelogram;
                         float oneOverW = t0 * oneOverW0 + t1 * oneOverW1 + t2 * oneOverW2;
-                        color = (1.0f / oneOverW) * (c0 * oneOverW0 * t0 + c1 * oneOverW1 * t1 + c2 * oneOverW2 * t2);
+                        Vec3f color = (1.0f / oneOverW) * (c0 * oneOverW0 * t0 + c1 * oneOverW1 * t1 + c2 * oneOverW2 * t2);
 
                         uint8_t r = ClampChannel(color.r);
                         uint8_t g = ClampChannel(color.g);
@@ -361,7 +204,6 @@ void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, int w, int h, const
         }   // End of insidePts
 
     }   // End of vertIndices
-
 }
 
 void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, QTexture *texture, int w, int h, const Model& model, const Mat44f& projMat, QRendererMode mode)
@@ -389,7 +231,6 @@ void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, QTexture *texture, 
         Vec3f lightDir = Math::Normal(Vec3f{0.0f, -1.0f, -1.0f});
         // @note Since it survives back face culling, surfNormal should be (+)
         float dp = Math::Dot(lightDir, surfNormal);
-        color = Vec3f{1.0f, 1.0f, 1.0f} * -dp;
 
         // To clip space
         std::vector<float> wCoords = {-v0.z, -v1.z, -v2.z};
@@ -539,7 +380,21 @@ void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, QTexture *texture, 
                             }
                             else
                             {
-                                pixels[x + y * w] = myColor;
+                                uint8_t r, g, b, a;
+                                ToComponent(myColor, r, g, b, a);
+
+                                // Change to range 0-1 to perform calculations, and change back to
+                                // 0-255 for outputs. This somehow avoid white triangles around the
+                                // model
+                                r = ClampChannel(((float)r / 255.0f) * -dp);
+                                g = ClampChannel(((float)g / 255.0f) * -dp);
+                                b = ClampChannel(((float)b / 255.0f) * -dp);
+                                a = ClampChannel(((float)a / 255.0f) * -dp);
+
+                                // @todo It seems that we don't have to worry about gamma correction?
+                                //pixels[x + y * w] = ToColor(DecodeGamma(r) * -dp, DecodeGamma(g) * -dp, DecodeGamma(b) * -dp, DecodeGamma(a) * -dp);
+                                pixels[x + y * w] = ToColor(r, g, b, a);
+                                //pixels[x + y * w] = myColor;
                                 zBuffer[x + y * w] = oneOverW;
                             }
                         }
@@ -555,11 +410,26 @@ void Rasterizer::Rasterize(uint32_t *pixels, float *zBuffer, QTexture *texture, 
 }
 
 
+unsigned char Rasterizer::DecodeGamma(int value)
+{
+    return g_gammaDecodedTable[value];
+}
+
 uint32_t Rasterizer::ToColor(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 {
     uint32_t color = (a << 24) | (b << 16) | (g << 8) | r;
     return color;
 }
+
+void Rasterizer::ToComponent(uint32_t inColor, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a)
+{
+    int firstByte = (1 << 8) - 1;
+    r = (inColor >> 0) & firstByte;
+    g = (inColor >> 8) & firstByte;
+    b = (inColor >> 16) & firstByte;
+    a = (inColor >> 24) & firstByte;
+}
+
 
 uint8_t Rasterizer::ClampChannel(float channel)
 {
@@ -687,7 +557,7 @@ std::vector<Triangle> Rasterizer::ClipTriangleAgainstPlane(Vec3f planeN, Vec3f p
 
     if (insidePts.size() == 1 && outsidePts.size() == 2)
     {
-        color = Vec3f{1.0f, 0.0f, 0.0f};
+        debugColor = Vec3f{1.0f, 0.0f, 0.0f};
 
         float tb, ta;
         // Assuming v0 v1 v2, outsidePt = v0 v1 are clipped, insidePt = v2, a is intersection in
@@ -724,7 +594,7 @@ std::vector<Triangle> Rasterizer::ClipTriangleAgainstPlane(Vec3f planeN, Vec3f p
 
     if (outsidePts.size() == 1 && insidePts.size() == 2)
     {
-        color = Vec3f{0.0f, 1.0f, 0.0f};
+        debugColor = Vec3f{0.0f, 1.0f, 0.0f};
 
         // Assuming v0 v1 v2, outsidePt = v2 is clipped, insidePt = v0 v1, a is intersection in ray
         // v2v0, b is intersection in ray v2v1

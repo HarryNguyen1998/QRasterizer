@@ -1,10 +1,15 @@
 # QRasterizer
-A rasterizer for me to understand how a rendering API (OpenGL, DirectX) roughly works under the hood.
+A rasterizer for me to understand how a rendering API (OpenGL, DirectX) roughly works under the hood. You could read my postmortem [here](https://harrynguyen1998.github.io/blog/qrasterizer)
 
-<table><tr>
-<td> <img src="images/wireframe.png" alt="Drawing" style="width: 250px;"/> </td>
-<td> <img src="images/z-buffer.png" alt="Drawing" style="width: 250px;"/> </td>
-<td> <img src="images/texture-mapping.png" alt="Drawing" style="width: 250px;"/> </td>
+<table>
+<tr>
+  <td> <img src="images/wireframe.png" alt="Wireframe" style="width: 125px; text-align: center; vertical-align: middle;"/> <figcaption>Wireframe rendering</figcaption></td>
+  <td> <img src="images/z-buffer.png" alt="z-buffer" style="width: 125px; text-align: center; vertical-align: middle;"/> <figcaption>z-buffer</td>
+</tr>
+<tr>
+<td> <img src="images/flat-shading.png" alt="flat-shading" style="width: 125px; text-align: center; vertical-align: middle;"/> <figcaption>flat shading</td>
+<td> <img src="images/texture-and-flat-shading.png" alt="texture with flat shading" style="width: 125px; text-align: center; vertical-align: middle;"/> <figcaption>texture mapping</td>
+<td> <img src="images/thumbnail.png" alt="Demo" style="width: 125px; text-align: center; vertical-align: middle;"/> <figcaption>Full demo</td>
 </tr></table>
 
 ---

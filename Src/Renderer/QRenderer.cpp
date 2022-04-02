@@ -30,7 +30,7 @@ bool QRenderer::Init(SDL_Window *window, int w, int h)
         return false;
     }
 
-    m_pixels = std::vector<uint32_t>(m_w * m_h, 50);
+    m_pixels = std::vector<uint32_t>(m_w * m_h, 0);
     m_zBuffer = std::vector<float>(m_w * m_h, 0.0f);
 
     return true;
@@ -67,17 +67,17 @@ Mat44f QRenderer::LookAt(const Vec3f& eye, const Vec3f& at, const Vec3f& up)
     Mat44f viewMat{};
     for (int i = 0; i < 3; ++i)
     {
-        // Inverse of orthonormal is transpose, of translation is same values but negated.
+        // Inverse of orthonormal is transpose
         viewMat(i, 0) = camRight[i];
         viewMat(i, 1) = camUp[i];
         viewMat(i, 2) = camForward[i];
-        viewMat(3, i) = -eye[i];
     }
-#if 0
+
+    // Cam matrix is translation from origin to eye, so inverse is negation, coupled with (RT)^-1 =
+    // T^-1 R^-1, we must also dot by R parts
     viewMat(3, 0) = -Math::Dot(camRight, eye);
     viewMat(3, 1) = -Math::Dot(camUp, eye);
     viewMat(3, 2) = -Math::Dot(camForward, eye);
-#endif
 
     return viewMat;
 }
